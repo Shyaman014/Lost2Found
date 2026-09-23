@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
+import { createNotification } from '../services/notificationService.js';
 
 let io;
 
@@ -41,8 +42,9 @@ export const initializeSocket = (server) => {
   });
 
   io.on('connection', (socket) => {
-    // console.log(`User connected: ${socket.user.name} (${socket.user._id})`);
-
+    // Join a private room for the user to receive targeted real-time notifications
+    socket.join(`user:${socket.user._id}`);
+    
     // Handle joining a conversation room
     socket.on('conversation:join', async (conversationId, callback) => {
       try {
@@ -126,9 +128,35 @@ export const initializeSocket = (server) => {
         await conversation.save();
 
         // Broadcast to the room
-        io.to(`conversation:${conversationId}`).emit('message:new', message);
+        const roomName = `conversation:${conversationId}`;
+        io.to(roomName).emit('message:new', message);
 
         if (callback) callback({ success: true, message });
+
+        // Determine if the recipient is actively in the room. If not, send a notification.
+        // Identify the other participant
+        const recipientId = conversation.participants.find(
+          (p) => p.toString() !== socket.user._id.toString()
+        );
+
+        if (recipientId) {
+          const socketsInRoom = await io.in(roomName).fetchSockets();
+          const isRecipientInRoom = socketsInRoom.some(
+            (s) => s.user && s.user._id.toString() === recipientId.toString()
+          );
+
+          if (!isRecipientInRoom) {
+            await createNotification({
+              recipient: recipientId,
+              type: 'new_message',
+              title: 'New Message',
+              message: `You have a new message regarding ${conversation.item?.title || 'an item'}.`,
+              actionUrl: `/messages/${conversationId}`,
+              relatedConversation: conversationId,
+              relatedItem: conversation.item,
+            });
+          }
+        }
       } catch (error) {
         console.error('[Socket Message Error]', error);
         if (callback) callback({ error: 'Failed to send message' });
