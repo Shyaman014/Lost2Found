@@ -67,7 +67,7 @@ const reportSchema = new mongoose.Schema(
 // Indexes
 reportSchema.index({ reporter: 1 });
 reportSchema.index({ targetType: 1, targetId: 1 });
-reportSchema.index({ status: 1 });
+reportSchema.index({ status: 1, createdAt: 1 });
 reportSchema.index({ createdAt: -1 });
 
 // Prevent a user from filing duplicate pending reports for the same target

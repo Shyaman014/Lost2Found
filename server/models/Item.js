@@ -109,9 +109,14 @@ const itemSchema = new mongoose.Schema(
   }
 );
 
-const Item = mongoose.model('Item', itemSchema);
-
-// Phase 10 — moderation filter index
+// Query & Analytics Indexes
 itemSchema.index({ moderationStatus: 1 });
+itemSchema.index({ createdAt: -1 });
+itemSchema.index({ type: 1, createdAt: 1 });
+itemSchema.index({ category: 1, createdAt: 1 });
+itemSchema.index({ status: 1, createdAt: 1 });
+itemSchema.index({ location: 1 });
+
+const Item = mongoose.model('Item', itemSchema);
 
 export default Item;

@@ -48,7 +48,7 @@ const auditLogSchema = new mongoose.Schema(
 
 // Indexes for efficient querying
 auditLogSchema.index({ admin: 1 });
-auditLogSchema.index({ action: 1 });
+auditLogSchema.index({ action: 1, createdAt: -1 });
 auditLogSchema.index({ targetType: 1, targetId: 1 });
 auditLogSchema.index({ createdAt: -1 });
 

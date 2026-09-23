@@ -17,12 +17,16 @@ import {
   reviewReport,
   getAuditLog,
 } from '../controllers/adminController.js';
+import adminAnalyticsRoutes from './adminAnalyticsRoutes.js';
 
 const router = express.Router();
 
 // All admin routes require authentication + admin role
 router.use(protect);
 router.use(authorizeRoles('admin'));
+
+// Analytics (Phase 11)
+router.use('/analytics', adminAnalyticsRoutes);
 
 // Dashboard
 router.get('/dashboard/stats', getDashboardStats);

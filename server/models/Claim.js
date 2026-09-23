@@ -55,7 +55,8 @@ const claimSchema = new mongoose.Schema(
 // Indexes
 claimSchema.index({ item: 1 });
 claimSchema.index({ claimant: 1 });
-claimSchema.index({ status: 1 });
+claimSchema.index({ status: 1, createdAt: 1 });
+claimSchema.index({ createdAt: -1 });
 
 // Prevent a user from having multiple active/approved claims on the same item.
 // (They can submit a new one if their previous one was rejected or cancelled).

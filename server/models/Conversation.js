@@ -42,7 +42,6 @@ function arrayLimit(val) {
 // Indexes for faster lookups
 conversationSchema.index({ participants: 1 });
 conversationSchema.index({ item: 1 });
-conversationSchema.index({ claim: 1 });
 conversationSchema.index({ lastMessageAt: -1 });
 
 const Conversation = mongoose.model('Conversation', conversationSchema);

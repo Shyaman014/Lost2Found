@@ -1,5 +1,5 @@
 import { Server } from 'socket.io';
-import cookie from 'cookie';
+import * as cookie from 'cookie';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Conversation from '../models/Conversation.js';
@@ -19,7 +19,8 @@ export const initializeSocket = (server) => {
   // Socket Authentication Middleware
   io.use(async (socket, next) => {
     try {
-      const cookies = cookie.parse(socket.request.headers.cookie || '');
+      const parseFn = cookie.parseCookie || cookie.parse;
+      const cookies = parseFn ? parseFn(socket.request.headers.cookie || '') : {};
       const token = cookies.jwt;
 
       if (!token) {
