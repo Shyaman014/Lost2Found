@@ -81,7 +81,28 @@ const itemSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-    }
+    },
+    // ── Phase 10: Admin Moderation ──────────────────────────────────────────
+    moderationStatus: {
+      type: String,
+      enum: ['active', 'flagged', 'removed'],
+      default: 'active',
+    },
+    removedAt: {
+      type: Date,
+      default: null,
+    },
+    removedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    removalReason: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Removal reason cannot exceed 500 characters'],
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -89,5 +110,8 @@ const itemSchema = new mongoose.Schema(
 );
 
 const Item = mongoose.model('Item', itemSchema);
+
+// Phase 10 — moderation filter index
+itemSchema.index({ moderationStatus: 1 });
 
 export default Item;

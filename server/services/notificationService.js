@@ -1,4 +1,5 @@
 import Notification from '../models/Notification.js';
+import User from '../models/User.js';
 import { getIO } from '../config/socket.js';
 
 /**
@@ -43,5 +44,21 @@ export const createNotification = async (data) => {
   } catch (error) {
     console.error('[NotificationService] Failed to create notification:', error.message);
     throw error;
+  }
+};
+
+/**
+ * Phase 10: Notify all active admin users.
+ * Silently ignores failures for individual admins.
+ * @param {Object} data - same shape as createNotification but without recipient
+ */
+export const notifyAdmins = async (data) => {
+  try {
+    const admins = await User.find({ role: 'admin', isActive: true }).select('_id').lean();
+    await Promise.allSettled(
+      admins.map((admin) => createNotification({ ...data, recipient: admin._id }))
+    );
+  } catch (error) {
+    console.error('[NotificationService] Failed to notify admins:', error.message);
   }
 };

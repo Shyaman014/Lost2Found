@@ -82,6 +82,9 @@ export const getItems = async (req, res) => {
     // --- Build query object ---
     const query = {};
 
+    // Phase 10: Always exclude admin-removed items from student-facing queries
+    query.moderationStatus = { $ne: 'removed' };
+
     // Status — default to 'active'
     const allowedStatuses = ['active', 'resolved'];
     query.status = allowedStatuses.includes(status) ? status : 'active';
@@ -221,6 +224,11 @@ export const getItemById = async (req, res) => {
       .populate('reportedBy', 'name');
 
     if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    // Phase 10: Hide admin-removed items from students
+    if (item.moderationStatus === 'removed') {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
 

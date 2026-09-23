@@ -17,6 +17,9 @@ const notificationSchema = new mongoose.Schema(
         'new_message',
         'potential_match',
         'item_returned',
+        // Phase 10 — Admin notifications
+        'report_submitted',
+        'moderation_action',
       ],
       required: true,
     },
