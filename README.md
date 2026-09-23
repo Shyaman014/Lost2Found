@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Lost2Found
 
 ## Description
@@ -81,3 +82,6 @@ Future phases will introduce:
 - Notifications
 - Admin moderation
 - Analytics
+=======
+# Lost2Found
+>>>>>>> a18572ea22360a9b1bb712ec1e8fc39c87228c28
