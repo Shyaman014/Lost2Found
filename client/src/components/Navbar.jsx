@@ -24,6 +24,10 @@ const Navbar = () => {
             
             {isAuthenticated ? (
               <>
+                <Link to="/items" className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition">Items</Link>
+                <Link to="/report-lost" className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition">Report Lost</Link>
+                <Link to="/report-found" className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition">Report Found</Link>
+                <Link to="/my-items" className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition">My Items</Link>
                 <Link to="/profile" className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition">Profile</Link>
                 {currentUser?.role === 'admin' && (
                   <span className="text-purple-600 px-3 py-2 rounded-md text-sm font-medium">Admin</span>

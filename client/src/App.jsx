@@ -6,6 +6,12 @@ import NotFound from './pages/NotFound';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import Items from './pages/Items';
+import MyItems from './pages/MyItems';
+import ReportLost from './pages/ReportLost';
+import ReportFound from './pages/ReportFound';
+import ItemDetails from './pages/ItemDetails';
+import EditItem from './pages/EditItem';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
@@ -23,6 +29,12 @@ function App() {
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/profile" element={<Profile />} />
+              <Route path="/items" element={<Items />} />
+              <Route path="/my-items" element={<MyItems />} />
+              <Route path="/items/:id" element={<ItemDetails />} />
+              <Route path="/items/:id/edit" element={<EditItem />} />
+              <Route path="/report-lost" element={<ReportLost />} />
+              <Route path="/report-found" element={<ReportFound />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
