@@ -1,4 +1,5 @@
 import Item from '../models/Item.js';
+import { uploadImage, deleteImage } from '../services/cloudinaryService.js';
 
 // @desc    Create a new item
 // @route   POST /api/items
@@ -15,6 +16,16 @@ export const createItem = async (req, res) => {
   }
 
   try {
+    let imageData = null;
+
+    if (req.file) {
+      const result = await uploadImage(req.file.buffer);
+      imageData = {
+        url: result.url,
+        publicId: result.publicId
+      };
+    }
+
     const item = await Item.create({
       title,
       description,
@@ -28,6 +39,7 @@ export const createItem = async (req, res) => {
       identifyingDetails,
       contactPreference,
       status: 'active',
+      image: imageData,
       reportedBy: req.user._id
     });
 
@@ -46,7 +58,6 @@ export const createItem = async (req, res) => {
 // @access  Private
 export const getItems = async (req, res) => {
   try {
-    // Only return active items for now
     const items = await Item.find({ status: 'active' })
       .populate('reportedBy', 'name')
       .sort({ createdAt: -1 });
@@ -113,21 +124,39 @@ export const updateItem = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
 
-    // Check ownership
     if (item.reportedBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'You are not authorized to modify this item' });
     }
 
-    // Disallow overriding reportedBy or implicitly setting status via PUT body 
-    // Status should be changed via PATCH route typically, or handle explicitly here.
-    // We will exclude reportedBy from updates to be safe.
-    const { reportedBy, ...updateData } = req.body;
+    const { reportedBy, image, ...updateData } = req.body;
+    let newImageData = item.image; // default to existing
+    let oldPublicIdToDelete = null;
+
+    if (req.file) {
+      const result = await uploadImage(req.file.buffer);
+      newImageData = {
+        url: result.url,
+        publicId: result.publicId
+      };
+      
+      // If there was an old image, queue it for deletion
+      if (item.image && item.image.publicId) {
+        oldPublicIdToDelete = item.image.publicId;
+      }
+    }
+
+    updateData.image = newImageData;
 
     item = await Item.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true, runValidators: true }
     );
+
+    // Delete old image from Cloudinary only after successful DB update
+    if (oldPublicIdToDelete) {
+      await deleteImage(oldPublicIdToDelete);
+    }
 
     res.status(200).json({
       success: true,
@@ -150,12 +179,17 @@ export const deleteItem = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
 
-    // Check ownership
     if (item.reportedBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'You are not authorized to modify this item' });
     }
 
+    const publicIdToDelete = item.image?.publicId;
+
     await item.deleteOne();
+
+    if (publicIdToDelete) {
+      await deleteImage(publicIdToDelete);
+    }
 
     res.status(200).json({
       success: true,
@@ -163,6 +197,42 @@ export const deleteItem = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error while deleting item' });
+  }
+};
+
+// @desc    Remove an image from an item
+// @route   DELETE /api/items/:id/image
+// @access  Private
+export const removeImage = async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id);
+
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    if (item.reportedBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to modify this item' });
+    }
+
+    if (!item.image || !item.image.publicId) {
+      return res.status(400).json({ success: false, message: 'Item has no image to remove' });
+    }
+
+    const publicIdToDelete = item.image.publicId;
+
+    item.image = null; // Unset image
+    await item.save();
+
+    await deleteImage(publicIdToDelete);
+
+    res.status(200).json({
+      success: true,
+      message: 'Image removed successfully',
+      data: { item }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error while removing image' });
   }
 };
 
@@ -183,7 +253,6 @@ export const updateItemStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
 
-    // Check ownership
     if (item.reportedBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'You are not authorized to modify this item status' });
     }

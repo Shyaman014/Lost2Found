@@ -16,8 +16,14 @@ const ItemForm = ({ type, initialData = null, isEdit = false }) => {
     identifyingDetails: '',
     contactPreference: 'in_app',
   });
+  
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [existingImage, setExistingImage] = useState(null);
+  
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isRemovingImage, setIsRemovingImage] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -33,11 +39,56 @@ const ItemForm = ({ type, initialData = null, isEdit = false }) => {
         identifyingDetails: initialData.identifyingDetails || '',
         contactPreference: initialData.contactPreference || 'in_app',
       });
+      if (initialData.image) {
+        setExistingImage(initialData.image);
+      }
     }
   }, [initialData]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setError('Please select a valid image (JPG, PNG, WEBP).');
+        return;
+      }
+      
+      // Validate size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size must be less than 5MB.');
+        return;
+      }
+      
+      setError('');
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const clearImageSelection = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleRemoveExistingImage = async () => {
+    if (!initialData?._id) return;
+    setIsRemovingImage(true);
+    try {
+      const response = await itemService.removeImage(initialData._id);
+      if (response.success) {
+        setExistingImage(null);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to remove image');
+    } finally {
+      setIsRemovingImage(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -47,6 +98,9 @@ const ItemForm = ({ type, initialData = null, isEdit = false }) => {
 
     try {
       const payload = { ...formData, type: type || initialData?.type };
+      if (imageFile) {
+        payload.image = imageFile;
+      }
       
       let response;
       if (isEdit) {
@@ -78,6 +132,54 @@ const ItemForm = ({ type, initialData = null, isEdit = false }) => {
       {error && <div className="p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200">{error}</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Image Upload Section */}
+        <div className="md:col-span-2 p-4 border border-dashed border-gray-300 rounded-md bg-gray-50">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Item Image</label>
+          
+          {existingImage && !imagePreview ? (
+            <div className="flex flex-col items-start gap-3">
+              <div className="relative">
+                <img src={existingImage.url} alt="Current item" className="h-40 w-auto rounded object-cover shadow-sm" />
+              </div>
+              <button
+                type="button"
+                onClick={handleRemoveExistingImage}
+                disabled={isRemovingImage}
+                className="text-sm text-red-600 hover:text-red-800 font-medium"
+              >
+                {isRemovingImage ? 'Removing...' : 'Remove Image'}
+              </button>
+              <p className="text-xs text-gray-500 mt-2">To replace, select a new image below.</p>
+            </div>
+          ) : imagePreview ? (
+            <div className="flex flex-col items-start gap-3">
+              <img src={imagePreview} alt="Preview" className="h-40 w-auto rounded object-cover shadow-sm" />
+              <button
+                type="button"
+                onClick={clearImageSelection}
+                className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+              >
+                Cancel Selection
+              </button>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-gray-500 mb-2">Optional. Upload a photo to help identify the item.</p>
+            </div>
+          )}
+          
+          <div className="mt-4">
+            <input
+              type="file"
+              accept="image/jpeg, image/jpg, image/png, image/webp"
+              onChange={handleImageChange}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+            />
+            <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP. Max 5MB.</p>
+          </div>
+        </div>
+
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700">Title *</label>
           <input

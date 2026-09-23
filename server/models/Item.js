@@ -73,6 +73,10 @@ const itemSchema = new mongoose.Schema(
       enum: ['active', 'resolved'],
       default: 'active',
     },
+    image: {
+      url: String,
+      publicId: String,
+    },
     reportedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

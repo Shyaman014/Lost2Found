@@ -69,6 +69,17 @@ const ItemDetails = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
       <div className="bg-white shadow-sm overflow-hidden sm:rounded-lg border border-gray-200">
+        
+        {item.image && (
+          <div className="w-full h-64 sm:h-96 bg-gray-100 overflow-hidden relative">
+            <img 
+              src={item.image.url} 
+              alt={`${item.title} reported as ${item.type}`}
+              className="w-full h-full object-contain bg-black/5"
+            />
+          </div>
+        )}
+
         <div className="px-4 py-5 sm:px-6 flex justify-between items-center flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
