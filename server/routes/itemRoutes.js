@@ -9,6 +9,7 @@ import {
   updateItemStatus,
   removeImage
 } from '../controllers/itemController.js';
+import { triggerMatching, getMatches } from '../controllers/matchController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import upload from '../middleware/uploadMiddleware.js';
 
@@ -33,5 +34,11 @@ router.route('/:id/image')
 
 router.route('/:id/status')
   .patch(updateItemStatus);
+
+router.route('/:id/match')
+  .post(triggerMatching);
+
+router.route('/:id/matches')
+  .get(getMatches);
 
 export default router;

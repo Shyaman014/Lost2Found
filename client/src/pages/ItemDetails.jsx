@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import itemService from '../services/itemService';
 import { AuthContext } from '../context/AuthContext';
+import PotentialMatches from '../components/items/PotentialMatches';
 
 const ItemDetails = () => {
   const { id } = useParams();
@@ -198,6 +199,9 @@ const ItemDetails = () => {
           </dl>
         </div>
       </div>
+      
+      {/* AI Matching Section */}
+      <PotentialMatches itemId={id} isOwner={isOwner} />
     </div>
   );
 };

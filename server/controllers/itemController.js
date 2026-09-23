@@ -53,23 +53,145 @@ export const createItem = async (req, res) => {
   }
 };
 
-// @desc    Get all active items
+// @desc    Get all items with search, filter, sort, pagination
 // @route   GET /api/items
 // @access  Private
 export const getItems = async (req, res) => {
   try {
-    const items = await Item.find({ status: 'active' })
-      .populate('reportedBy', 'name')
-      .sort({ createdAt: -1 });
+    const {
+      search,
+      type,
+      category,
+      location,
+      dateFrom,
+      dateTo,
+      color,
+      brand,
+      status,
+      sort,
+      page: pageParam,
+      limit: limitParam,
+    } = req.query;
+
+    // --- Validate & sanitize pagination ---
+    const page = Math.max(1, parseInt(pageParam, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(limitParam, 10) || 12));
+    const skip = (page - 1) * limit;
+
+    // --- Build query object ---
+    const query = {};
+
+    // Status — default to 'active'
+    const allowedStatuses = ['active', 'resolved'];
+    query.status = allowedStatuses.includes(status) ? status : 'active';
+
+    // Type filter
+    if (type) {
+      if (!['lost', 'found'].includes(type)) {
+        return res.status(400).json({ success: false, message: 'Invalid type value. Must be "lost" or "found".' });
+      }
+      query.type = type;
+    }
+
+    // Category filter
+    const allowedCategories = [
+      'electronics', 'documents', 'wallet', 'keys', 'bags',
+      'clothing', 'books', 'stationery', 'jewelry', 'accessories', 'other',
+    ];
+    if (category) {
+      if (!allowedCategories.includes(category.toLowerCase())) {
+        return res.status(400).json({ success: false, message: 'Invalid category value.' });
+      }
+      query.category = category.toLowerCase();
+    }
+
+    // Date range filter
+    if (dateFrom || dateTo) {
+      query.date = {};
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+        if (isNaN(from)) return res.status(400).json({ success: false, message: 'Invalid dateFrom value.' });
+        query.date.$gte = from;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo);
+        if (isNaN(to)) return res.status(400).json({ success: false, message: 'Invalid dateTo value.' });
+        query.date.$lte = to;
+      }
+      if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
+        return res.status(400).json({ success: false, message: 'dateFrom cannot be later than dateTo.' });
+      }
+    }
+
+    // Location filter (case-insensitive partial match)
+    if (location && location.trim()) {
+      query.location = { $regex: location.trim(), $options: 'i' };
+    }
+
+    // Color filter (case-insensitive partial match)
+    if (color && color.trim()) {
+      query.color = { $regex: color.trim(), $options: 'i' };
+    }
+
+    // Brand filter (case-insensitive partial match)
+    if (brand && brand.trim()) {
+      query.brand = { $regex: brand.trim(), $options: 'i' };
+    }
+
+    // Text search across multiple fields
+    if (search && search.trim()) {
+      const searchRegex = { $regex: search.trim(), $options: 'i' };
+      query.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+        { brand: searchRegex },
+        { color: searchRegex },
+        { location: searchRegex },
+        { identifyingDetails: searchRegex },
+      ];
+    }
+
+    // --- Sorting ---
+    const sortMap = {
+      newest: { createdAt: -1 },
+      oldest: { createdAt: 1 },
+      'date-newest': { date: -1 },
+      'date-oldest': { date: 1 },
+    };
+    const sortObj = sortMap[sort] || sortMap['newest'];
+
+    // --- Execute query with pagination ---
+    const [items, totalItems] = await Promise.all([
+      Item.find(query)
+        .populate('reportedBy', 'name')
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Item.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(totalItems / limit);
 
     res.status(200).json({
       success: true,
-      data: { items }
+      data: {
+        items,
+        pagination: {
+          page,
+          limit,
+          totalItems,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error while fetching items' });
   }
 };
+
 
 // @desc    Get current user's items
 // @route   GET /api/items/my
