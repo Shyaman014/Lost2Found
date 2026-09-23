@@ -7,9 +7,11 @@ import {
   updateItem,
   deleteItem,
   updateItemStatus,
-  removeImage
+  removeImage,
+  markItemReturned
 } from '../controllers/itemController.js';
 import { triggerMatching, getMatches } from '../controllers/matchController.js';
+import { createClaim, getItemClaims } from '../controllers/claimController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import upload from '../middleware/uploadMiddleware.js';
 
@@ -35,10 +37,17 @@ router.route('/:id/image')
 router.route('/:id/status')
   .patch(updateItemStatus);
 
+router.route('/:id/returned')
+  .patch(markItemReturned);
+
 router.route('/:id/match')
   .post(triggerMatching);
 
 router.route('/:id/matches')
   .get(getMatches);
+
+router.route('/:id/claims')
+  .post(createClaim)
+  .get(getItemClaims);
 
 export default router;

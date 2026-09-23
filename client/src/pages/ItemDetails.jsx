@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import itemService from '../services/itemService';
 import { AuthContext } from '../context/AuthContext';
 import PotentialMatches from '../components/items/PotentialMatches';
+import ClaimForm from '../components/claims/ClaimForm';
+import chatService from '../services/chatService';
 
 const ItemDetails = () => {
   const { id } = useParams();
@@ -14,6 +16,10 @@ const ItemDetails = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [showClaimForm, setShowClaimForm] = useState(false);
+  const [hasClaimed, setHasClaimed] = useState(false);
+  const [claimsCount, setClaimsCount] = useState(0);
+  const [conversationId, setConversationId] = useState(null);
 
   useEffect(() => {
     const fetchItem = async () => {
@@ -21,6 +27,32 @@ const ItemDetails = () => {
         const response = await itemService.getItemById(id);
         if (response.success) {
           setItem(response.data.item);
+          // Check if there are claims for finders
+          if (response.data.item.type === 'found' && response.data.item.reportedBy?._id === currentUser?._id) {
+            try {
+              const claimsRes = await itemService.getItemClaims(id);
+              if (claimsRes.success) setClaimsCount(claimsRes.data.claims.length);
+            } catch (e) {}
+          }
+          // Check if current user has already claimed
+          if (currentUser && response.data.item.type === 'found' && response.data.item.reportedBy?._id !== currentUser._id) {
+            try {
+              const myClaims = await itemService.getMyClaims();
+              if (myClaims.success) {
+                const existing = myClaims.data.claims.find(c => c.item._id === id && ['pending', 'approved'].includes(c.status));
+                if (existing) setHasClaimed(true);
+              }
+            } catch (e) {}
+          }
+          if (currentUser && response.data.item.status === 'claimed') {
+            try {
+              const chatsRes = await chatService.getConversations();
+              if (chatsRes.success) {
+                const chat = chatsRes.data.conversations.find(c => c.item._id === id);
+                if (chat) setConversationId(chat._id);
+              }
+            } catch (e) {}
+          }
         } else {
           setError('Failed to fetch item details');
         }
@@ -63,6 +95,26 @@ const ItemDetails = () => {
     }
   };
 
+  const handleMarkReturned = async () => {
+    if (!window.confirm('Are you sure this item has been physically returned to the owner?')) return;
+    setIsUpdatingStatus(true);
+    try {
+      const response = await itemService.markItemReturned(id);
+      if (response.success) {
+        setItem(response.data.item);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error marking item as returned');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleClaimSuccess = () => {
+    setShowClaimForm(false);
+    setHasClaimed(true);
+  };
+
   if (loading) return <div className="text-center py-20">Loading item...</div>;
   if (error) return <div className="text-center py-20 text-red-600">{error}</div>;
   if (!item) return <div className="text-center py-20">Item not found.</div>;
@@ -96,8 +148,35 @@ const ItemDetails = () => {
           </div>
           
           {isOwner && (
-            <div className="flex gap-2">
-              {item.status === 'active' && (
+            <div className="flex gap-2 flex-wrap">
+              {item.type === 'found' && claimsCount > 0 && (
+                <Link 
+                  to={`/items/${item._id}/claims`}
+                  className="px-3 py-1.5 border border-transparent text-sm font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none"
+                >
+                  View Claims ({claimsCount})
+                </Link>
+              )}
+              {item.type === 'found' && item.status === 'claimed' && (
+                <>
+                  {conversationId && (
+                    <Link 
+                      to={`/messages/${conversationId}`}
+                      className="px-3 py-1.5 border border-transparent text-sm font-medium rounded text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none"
+                    >
+                      Chat with Claimant
+                    </Link>
+                  )}
+                  <button 
+                    onClick={handleMarkReturned}
+                    disabled={isUpdatingStatus}
+                    className="px-3 py-1.5 border border-indigo-600 text-sm font-medium rounded text-indigo-600 bg-white hover:bg-indigo-50 focus:outline-none"
+                  >
+                    Mark as Returned
+                  </button>
+                </>
+              )}
+              {item.type === 'lost' && item.status === 'active' && (
                 <button 
                   onClick={() => handleStatusChange('resolved')}
                   disabled={isUpdatingStatus}
@@ -106,7 +185,7 @@ const ItemDetails = () => {
                   Mark Resolved
                 </button>
               )}
-              {item.status === 'resolved' && (
+              {item.type === 'lost' && item.status === 'resolved' && (
                 <button 
                   onClick={() => handleStatusChange('active')}
                   disabled={isUpdatingStatus}
@@ -126,7 +205,44 @@ const ItemDetails = () => {
               </button>
             </div>
           )}
+
+          {!isOwner && item.type === 'found' && currentUser && (
+            <div>
+              {item.status === 'active' && (
+                hasClaimed ? (
+                  <span className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-md text-sm font-medium">
+                    Claim Pending
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setShowClaimForm(true)}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
+                  >
+                    Claim This Item
+                  </button>
+                )
+              )}
+              {item.status === 'claimed' && conversationId && (
+                <Link
+                  to={`/messages/${conversationId}`}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 inline-block"
+                >
+                  Open Chat
+                </Link>
+              )}
+            </div>
+          )}
         </div>
+        
+        {showClaimForm && (
+          <div className="border-t border-gray-200 bg-gray-50 p-6">
+            <ClaimForm 
+              itemId={item._id} 
+              onSuccess={handleClaimSuccess}
+              onCancel={() => setShowClaimForm(false)}
+            />
+          </div>
+        )}
         
         {showDeleteConfirm && (
           <div className="bg-red-50 p-4 border-t border-b border-red-200">

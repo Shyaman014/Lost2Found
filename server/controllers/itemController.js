@@ -1,5 +1,6 @@
 import Item from '../models/Item.js';
 import { uploadImage, deleteImage } from '../services/cloudinaryService.js';
+import Conversation from '../models/Conversation.js';
 
 // @desc    Create a new item
 // @route   POST /api/items
@@ -389,5 +390,45 @@ export const updateItemStatus = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error while updating item status' });
+  }
+};
+
+// @desc    Mark an item as physically returned
+// @route   PATCH /api/items/:id/returned
+// @access  Private (Finder only)
+export const markItemReturned = async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id);
+
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    // Only the reporter can mark it returned
+    if (item.reportedBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to modify this item' });
+    }
+
+    // Item must be in "claimed" status to be marked returned
+    if (item.status !== 'claimed') {
+      return res.status(400).json({ success: false, message: `Item must be "claimed" before it can be marked "returned" (currently ${item.status})` });
+    }
+
+    item.status = 'returned';
+    await item.save();
+
+    // Close the associated conversation if it exists
+    await Conversation.findOneAndUpdate(
+      { item: item._id, status: 'active' },
+      { $set: { status: 'closed' } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Item has been successfully marked as returned.',
+      data: { item }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error while marking item returned' });
   }
 };

@@ -85,6 +85,42 @@ const itemService = {
     const response = await api.patch(`/matches/${matchId}/dismiss`);
     return response.data;
   },
+
+  // ── Phase 7: Claims ───────────────────────────────────────────────────────
+  createClaim: async (itemId, claimData) => {
+    const response = await api.post(`/items/${itemId}/claims`, claimData);
+    return response.data;
+  },
+
+  getItemClaims: async (itemId) => {
+    const response = await api.get(`/items/${itemId}/claims`);
+    return response.data;
+  },
+
+  getMyClaims: async () => {
+    const response = await api.get('/claims/my');
+    return response.data;
+  },
+
+  approveClaim: async (claimId) => {
+    const response = await api.patch(`/claims/${claimId}/approve`);
+    return response.data;
+  },
+
+  rejectClaim: async (claimId, reason) => {
+    const response = await api.patch(`/claims/${claimId}/reject`, { reason });
+    return response.data;
+  },
+
+  cancelClaim: async (claimId) => {
+    const response = await api.patch(`/claims/${claimId}/cancel`);
+    return response.data;
+  },
+
+  markItemReturned: async (itemId) => {
+    const response = await api.patch(`/items/${itemId}/returned`);
+    return response.data;
+  }
 };
 
 export default itemService;
