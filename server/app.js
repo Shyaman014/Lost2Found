@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import mongoSanitize from 'express-mongo-sanitize';
+import mongoSanitize from '@exortek/express-mongo-sanitize';
 import routes from './routes/index.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { globalLimiter } from './middleware/rateLimiter.js';

@@ -12,7 +12,8 @@ export const registerUser = async (req, res) => {
   }
 
   // Check if user exists
-  const userExists = await User.findOne({ email: email.toLowerCase() });
+  const normalizedEmail = email.toLowerCase().trim();
+  const userExists = await User.findOne({ email: normalizedEmail });
 
   if (userExists) {
     return res.status(409).json({ success: false, message: 'User already exists' });
@@ -21,7 +22,7 @@ export const registerUser = async (req, res) => {
   // Create user - explicitly exclude role from body to prevent admin injection
   const user = await User.create({
     name,
-    email: email.toLowerCase(),
+    email: normalizedEmail,
     password,
     college,
     studentId,
@@ -62,7 +63,8 @@ export const loginUser = async (req, res) => {
   }
 
   // Check for user email
-  const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+  const normalizedEmail = email.toLowerCase().trim();
+  const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
   if (!user) {
     return res.status(401).json({ success: false, message: 'Invalid credentials' });
