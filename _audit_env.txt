@@ -1,0 +1,34 @@
+NODE v22.13.0
+nm root true
+nm server true
+nm client true
+.env server true
+.env client false
+server dep express 5.2.1
+server dep mongoose 9.10.2
+server dep bcryptjs 3.0.3
+server dep jsonwebtoken 9.0.3
+server dep socket.io 4.8.3
+server dep multer 2.4.0
+server dep helmet 8.3.0
+server dep cors 2.8.6
+server dep express-rate-limit 8.7.0
+server dep @exortek/express-mongo-sanitize 3.0.1
+server dep cloudinary 2.11.0
+server dep @google/generative-ai 0.24.1
+server dep cookie-parser 1.4.7
+server dep dotenv 18.0.3
+server dep cookie 2.0.1
+client dep react 19.3.0
+client dep react-dom 19.3.0
+client dep react-router-dom 7.18.4
+client dep axios 1.20.0
+client dep socket.io-client 4.8.3
+client dep vite 8.3.0
+client dep tailwindcss 4.3.3
+client dep @vitejs/plugin-react 6.1.1
+client dep @tailwindcss/postcss 4.3.3
+server env keys PORT:4ch, MONGO_URI:36ch, CLIENT_URL:21ch, NODE_ENV:11ch, JWT_SECRET:36ch, JWT_EXPIRES_IN:3ch, ADMIN_NAME:10ch, ADMIN_EMAIL:20ch, ADMIN_PASSWORD:17ch
+mongo:27017 open true
+api:5000 open false
+vite:5173 open false
