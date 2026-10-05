@@ -95,6 +95,14 @@ class SocketService {
   offMessageRead(callback) {
     if (this.socket) this.socket.off('message:read', callback);
   }
+
+  // Real-time notification listener
+  onNotification(callback) {
+    if (this.socket) this.socket.on('notification:new', callback);
+  }
+  offNotification(callback) {
+    if (this.socket) this.socket.off('notification:new', callback);
+  }
 }
 
 const socketService = new SocketService();

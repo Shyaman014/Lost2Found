@@ -19,8 +19,7 @@ export const initializeSocket = (server) => {
   // Socket Authentication Middleware
   io.use(async (socket, next) => {
     try {
-      const parseFn = cookie.parseCookie || cookie.parse;
-      const cookies = parseFn ? parseFn(socket.request.headers.cookie || '') : {};
+      const cookies = cookie.parse(socket.request.headers.cookie || '');
       const token = cookies.jwt;
 
       if (!token) {
@@ -28,7 +27,8 @@ export const initializeSocket = (server) => {
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id).select('-password');
+      // JWT is signed with { userId, role } — must use decoded.userId
+      const user = await User.findById(decoded.userId).select('-password');
 
       if (!user) {
         return next(new Error('Authentication error: User not found'));

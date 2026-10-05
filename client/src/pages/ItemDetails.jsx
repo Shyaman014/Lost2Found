@@ -5,6 +5,7 @@ import { AuthContext } from '../context/AuthContext';
 import PotentialMatches from '../components/items/PotentialMatches';
 import ClaimForm from '../components/claims/ClaimForm';
 import chatService from '../services/chatService';
+import { getPlaceholderImage } from '../utils/placeholders';
 
 const ItemDetails = () => {
   const { id } = useParams();
@@ -123,15 +124,14 @@ const ItemDetails = () => {
     <div className="max-w-4xl mx-auto px-4 py-12">
       <div className="bg-white shadow-sm overflow-hidden sm:rounded-lg border border-gray-200">
         
-        {item.image && (
-          <div className="w-full h-64 sm:h-96 bg-gray-100 overflow-hidden relative">
-            <img 
-              src={item.image.url} 
-              alt={`${item.title} reported as ${item.type}`}
-              className="w-full h-full object-contain bg-black/5"
-            />
-          </div>
-        )}
+        <div className="w-full h-64 sm:h-96 bg-gray-100 overflow-hidden relative">
+          <img 
+            src={item.image?.url || getPlaceholderImage(item.category)} 
+            alt={`${item.title} reported as ${item.type}`}
+            className="w-full h-full object-contain bg-black/5"
+            loading="lazy"
+          />
+        </div>
 
         <div className="px-4 py-5 sm:px-6 flex justify-between items-center flex-wrap gap-4">
           <div>

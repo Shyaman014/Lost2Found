@@ -7,6 +7,7 @@ import claimRoutes from './claimRoutes.js';
 import conversationRoutes from './conversationRoutes.js';
 import adminRoutes from './adminRoutes.js';
 import reportRoutes from './reportRoutes.js';
+import notificationRoutes from './notificationRoutes.js';
 
 const router = express.Router();
 
@@ -18,5 +19,6 @@ router.use('/claims', claimRoutes);
 router.use('/conversations', conversationRoutes);
 router.use('/admin', adminRoutes);
 router.use('/reports', reportRoutes);
+router.use('/notifications', notificationRoutes);
 
 export default router;

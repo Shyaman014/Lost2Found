@@ -102,7 +102,7 @@ const Chat = () => {
       setMessages(prev => [...prev, msg]);
       
       // Mark it read immediately since we are in the active conversation
-      if (msg.sender !== currentUser._id) {
+      if (msg.sender !== currentUser.id) {
         socketService.markAsRead(id);
       }
     }
@@ -117,7 +117,7 @@ const Chat = () => {
           ...updated[idx],
           latestMessage: msg,
           lastMessageAt: msg.createdAt,
-          unreadCount: (msg.conversation !== id && msg.sender !== currentUser._id) 
+          unreadCount: (msg.conversation !== id && msg.sender !== currentUser.id) 
             ? updated[idx].unreadCount + 1 
             : updated[idx].unreadCount
         };
@@ -132,7 +132,7 @@ const Chat = () => {
   };
 
   const handleTypingStart = ({ conversationId, senderId }) => {
-    if (id === conversationId && senderId !== currentUser._id) {
+    if (id === conversationId && senderId !== currentUser.id) {
       setIsTyping(true);
       if (typingTimeout) clearTimeout(typingTimeout);
       setTypingTimeout(setTimeout(() => setIsTyping(false), 3000));
@@ -140,7 +140,7 @@ const Chat = () => {
   };
 
   const handleTypingStop = ({ conversationId, senderId }) => {
-    if (id === conversationId && senderId !== currentUser._id) {
+    if (id === conversationId && senderId !== currentUser.id) {
       setIsTyping(false);
       if (typingTimeout) clearTimeout(typingTimeout);
     }
@@ -149,7 +149,7 @@ const Chat = () => {
   const handleMessageRead = ({ conversationId, readAt }) => {
     if (id === conversationId) {
       setMessages(prev => prev.map(m => 
-        (!m.readAt && m.sender === currentUser._id) ? { ...m, readAt } : m
+        (!m.readAt && m.sender === currentUser.id) ? { ...m, readAt } : m
       ));
     }
   };

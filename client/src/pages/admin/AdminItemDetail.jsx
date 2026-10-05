@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import adminService from '../../services/adminService';
 import { ItemModerationBadge, ItemStatusBadge, ClaimStatusBadge } from '../../components/admin/Badges';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
+import { getPlaceholderImage } from '../../utils/placeholders';
 
 const AdminItemDetail = () => {
   const { id } = useParams();
@@ -232,17 +233,12 @@ const AdminItemDetail = () => {
           {/* Item Image */}
           <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm space-y-3">
             <h2 className="font-semibold text-gray-800 border-b border-gray-100 pb-2">Item Image</h2>
-            {item.image?.url ? (
-              <img
-                src={item.image.url}
-                alt={item.title}
-                className="w-full h-56 object-cover rounded-lg border border-gray-200"
-              />
-            ) : (
-              <div className="w-full h-40 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 text-sm">
-                No image uploaded
-              </div>
-            )}
+            <img
+              src={item.image?.url || getPlaceholderImage(item.category)}
+              alt={item.title}
+              className="w-full h-56 object-cover rounded-lg border border-gray-200"
+              loading="lazy"
+            />
           </div>
 
           {/* Reporter Details */}

@@ -13,6 +13,12 @@ const authService = {
     return response.data;
   },
 
+  // Demo login — no credentials needed
+  demoLogin: async () => {
+    const response = await api.post('/auth/demo');
+    return response.data;
+  },
+
   // Logout user
   logout: async () => {
     const response = await api.post('/auth/logout');

@@ -46,6 +46,15 @@ export const AuthProvider = ({ children }) => {
     return response;
   };
 
+  const demoLogin = async () => {
+    const response = await authService.demoLogin();
+    if (response.success) {
+      setCurrentUser(response.data.user);
+      setIsAuthenticated(true);
+    }
+    return response;
+  };
+
   const logout = async () => {
     await authService.logout();
     setCurrentUser(null);
@@ -60,6 +69,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         login,
         register,
+        demoLogin,
         logout,
       }}
     >

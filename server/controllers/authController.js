@@ -132,3 +132,56 @@ export const logoutUser = (req, res) => {
 
   res.status(200).json({ success: true, message: 'Logged out successfully' });
 };
+
+// @desc    Log in as demo user (creates demo account on first call)
+// @route   POST /api/auth/demo
+// @access  Public
+export const demoLogin = async (req, res) => {
+  const DEMO_EMAIL = 'demo@lost2found.app';
+  const DEMO_PASSWORD = 'Demo@Lost2Found2024';
+  const DEMO_NAME = 'Demo User';
+
+  try {
+    // Find or create the demo user
+    let user = await User.findOne({ email: DEMO_EMAIL }).select('+password');
+
+    if (!user) {
+      user = await User.create({
+        name: DEMO_NAME,
+        email: DEMO_EMAIL,
+        password: DEMO_PASSWORD,
+        college: 'Demo University',
+        studentId: 'DEMO001',
+        role: 'student',
+        isActive: true,
+      });
+      // Re-fetch with password for token generation
+      user = await User.findById(user._id).select('+password');
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({ success: false, message: 'Demo account is currently inactive' });
+    }
+
+    generateToken(res, user._id, user.role);
+
+    res.json({
+      success: true,
+      message: 'Logged in as demo user',
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          college: user.college,
+          studentId: user.studentId,
+          profileImage: user.profileImage,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('[Auth] demoLogin error:', error);
+    res.status(500).json({ success: false, message: 'Failed to start demo session' });
+  }
+};
