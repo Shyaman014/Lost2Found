@@ -30,7 +30,16 @@ const Navbar = () => {
                 <Link to="/messages" className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition">Messages</Link>
                 <Link to="/my-items" className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition">My Items</Link>
                 <Link to="/my-claims" className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition">My Claims</Link>
-                <Link to="/profile" className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition">Profile</Link>
+                <Link to="/profile" className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 px-2 py-1 rounded-full transition hover:bg-slate-50">
+                  {currentUser?.profileImage ? (
+                    <img src={currentUser.profileImage} alt={currentUser.name} className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-sm" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs uppercase shadow-sm">
+                      {currentUser?.name?.charAt(0) || 'U'}
+                    </div>
+                  )}
+                  <span className="text-sm font-medium pr-1 hidden lg:block">{currentUser?.name?.split(' ')[0]}</span>
+                </Link>
                 {currentUser?.role === 'admin' && (
                   <Link
                     to="/admin"

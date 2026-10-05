@@ -30,6 +30,16 @@ const authService = {
     const response = await api.get('/auth/me');
     return response.data;
   },
+
+  // Update profile
+  updateProfile: async (profileData) => {
+    const response = await api.put('/auth/profile', profileData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
 };
 
 export default authService;

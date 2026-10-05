@@ -18,6 +18,7 @@ import MyClaims from './pages/MyClaims';
 import ItemClaimsReview from './pages/ItemClaimsReview';
 import Chat from './pages/Chat';
 import Unauthorized from './pages/Unauthorized';
+import AIChatbot from './components/AIChatbot';
 
 // Admin Imports
 import AdminRoute from './components/AdminRoute';
@@ -41,6 +42,7 @@ const MainLayout = () => (
       <Outlet />
     </main>
     <Footer />
+    <AIChatbot />
   </div>
 );
 

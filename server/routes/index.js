@@ -8,6 +8,7 @@ import conversationRoutes from './conversationRoutes.js';
 import adminRoutes from './adminRoutes.js';
 import reportRoutes from './reportRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
+import aiRoutes from './aiRoutes.js';
 
 const router = express.Router();
 
@@ -20,5 +21,6 @@ router.use('/conversations', conversationRoutes);
 router.use('/admin', adminRoutes);
 router.use('/reports', reportRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/ai', aiRoutes);
 
 export default router;

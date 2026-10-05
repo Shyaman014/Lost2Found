@@ -61,6 +61,14 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
   };
 
+  const updateProfile = async (profileData) => {
+    const response = await authService.updateProfile(profileData);
+    if (response.success) {
+      setCurrentUser(response.data.user);
+    }
+    return response;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -71,6 +79,7 @@ export const AuthProvider = ({ children }) => {
         register,
         demoLogin,
         logout,
+        updateProfile,
       }}
     >
       {children}
