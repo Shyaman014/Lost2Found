@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import generateToken from '../utils/generateToken.js';
+import { uploadImage } from '../services/cloudinaryService.js';
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -131,6 +132,53 @@ export const logoutUser = (req, res) => {
   });
 
   res.status(200).json({ success: true, message: 'Logged out successfully' });
+};
+
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+export const updateProfile = async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    user.name = req.body.name || user.name;
+    user.college = req.body.college !== undefined ? req.body.college : user.college;
+    user.studentId = req.body.studentId !== undefined ? req.body.studentId : user.studentId;
+
+    if (req.body.password) {
+      user.password = req.body.password;
+    }
+
+    if (req.file) {
+      try {
+        const imageResult = await uploadImage(req.file.buffer, 'lost2found/profiles');
+        user.profileImage = imageResult.url;
+      } catch (error) {
+        console.error('[Auth] Profile image upload error:', error);
+        return res.status(500).json({ success: false, message: 'Image upload failed' });
+      }
+    }
+
+    const updatedUser = await user.save();
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: {
+          id: updatedUser._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          role: updatedUser.role,
+          college: updatedUser.college,
+          studentId: updatedUser.studentId,
+          profileImage: updatedUser.profileImage,
+        }
+      }
+    });
+  } else {
+    res.status(404).json({ success: false, message: 'User not found' });
+  }
 };
 
 // @desc    Log in as demo user (creates demo account on first call)
