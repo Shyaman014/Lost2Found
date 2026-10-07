@@ -58,7 +58,8 @@ const Profile = () => {
       if (res.success) {
         setSuccess(true);
         setIsEditing(false);
-        // Clear success message after 3 seconds
+        setImageFile(null);
+        setImagePreview(null); // reset local preview; view mode reads from currentUser directly
         setTimeout(() => setSuccess(false), 3000);
       } else {
         setError(res.message || 'Failed to update profile');
@@ -96,8 +97,20 @@ const Profile = () => {
             <div className="flex justify-between items-end -mt-12 mb-6">
               <div className="relative group">
                 <div className="h-24 w-24 rounded-2xl bg-white p-1.5 shadow-lg border border-slate-100 relative">
-                  {imagePreview ? (
-                    <img src={imagePreview} alt={currentUser.name} className="h-full w-full object-cover rounded-xl" />
+                  {/* View mode: read directly from currentUser — no state race condition */}
+                  {/* Edit mode: show local file preview (imagePreview from FileReader) */}
+                  {isEditing ? (
+                    imagePreview ? (
+                      <img src={imagePreview} alt={currentUser.name} className="h-full w-full object-cover rounded-xl" />
+                    ) : currentUser.profileImage ? (
+                      <img src={currentUser.profileImage} alt={currentUser.name} className="h-full w-full object-cover rounded-xl" />
+                    ) : (
+                      <div className="h-full w-full rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-4xl uppercase">
+                        {currentUser.name.charAt(0)}
+                      </div>
+                    )
+                  ) : currentUser.profileImage ? (
+                    <img src={currentUser.profileImage} alt={currentUser.name} className="h-full w-full object-cover rounded-xl" />
                   ) : (
                     <div className="h-full w-full rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-4xl uppercase">
                       {currentUser.name.charAt(0)}

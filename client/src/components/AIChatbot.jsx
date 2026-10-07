@@ -37,10 +37,11 @@ const AIChatbot = () => {
       if (response.success) {
         setMessages(prev => [...prev, { role: 'ai', text: response.data.reply }]);
       } else {
-        setMessages(prev => [...prev, { role: 'ai', text: "Sorry, I'm having trouble connecting right now." }]);
+        setMessages(prev => [...prev, { role: 'ai', text: response.message || "Sorry, I'm having trouble connecting right now." }]);
       }
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'ai', text: "Sorry, an error occurred while checking." }]);
+      const errMsg = error.response?.data?.message || "Sorry, an error occurred while checking.";
+      setMessages(prev => [...prev, { role: 'ai', text: errMsg }]);
     } finally {
       setLoading(false);
     }

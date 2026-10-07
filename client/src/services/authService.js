@@ -31,13 +31,10 @@ const authService = {
     return response.data;
   },
 
-  // Update profile
+  // Update profile — DO NOT set Content-Type manually; Axios auto-sets
+  // multipart/form-data with the correct boundary when given FormData
   updateProfile: async (profileData) => {
-    const response = await api.put('/auth/profile', profileData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await api.put('/auth/profile', profileData);
     return response.data;
   },
 };

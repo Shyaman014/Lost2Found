@@ -1,6 +1,32 @@
 import cloudinary from '../config/cloudinary.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const uploadImage = async (fileBuffer, folder = 'lost2found/items') => {
+  // Check if Cloudinary is actually configured, otherwise fallback to local filesystem
+  if (!process.env.CLOUDINARY_API_KEY || process.env.CLOUDINARY_API_KEY.includes('your_cloudinary')) {
+    const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
+    
+    // Ensure directory exists
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}.jpg`;
+    const filePath = path.join(uploadDir, uniqueName);
+    
+    fs.writeFileSync(filePath, fileBuffer);
+    
+    return {
+      url: `http://localhost:5000/uploads/${uniqueName}`,
+      publicId: `local-${uniqueName}`,
+    };
+  }
+
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -26,8 +52,18 @@ export const uploadImage = async (fileBuffer, folder = 'lost2found/items') => {
 export const deleteImage = async (publicId) => {
   try {
     if (!publicId) return;
+    
+    if (publicId.startsWith('local-')) {
+      const filename = publicId.replace('local-', '');
+      const filePath = path.join(__dirname, '..', 'public', 'uploads', filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      return;
+    }
+
     await cloudinary.uploader.destroy(publicId);
   } catch (error) {
-    console.error(`Failed to delete image from Cloudinary (publicId: ${publicId}):`, error);
+    console.error(`Failed to delete image (publicId: ${publicId}):`, error);
   }
 };

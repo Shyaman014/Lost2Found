@@ -6,36 +6,95 @@ import { uploadImage } from '../services/cloudinaryService.js';
 // @route   POST /api/auth/register
 // @access  Public
 export const registerUser = async (req, res) => {
-  const { name, email, password, college, studentId } = req.body;
+  try {
+    const { name, email, password, college, studentId } = req.body;
 
-  if (!name || !email || !password) {
-    return res.status(400).json({ success: false, message: 'Please add all required fields' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Please add all required fields' });
+    }
+
+    // Check if user exists
+    const normalizedEmail = email.toLowerCase().trim();
+    const userExists = await User.findOne({ email: normalizedEmail });
+
+    if (userExists) {
+      return res.status(409).json({ success: false, message: 'User already exists' });
+    }
+
+    // Create user - explicitly exclude role from body to prevent admin injection
+    const user = await User.create({
+      name,
+      email: normalizedEmail,
+      password,
+      college,
+      studentId,
+      role: 'student' // Force student role
+    });
+
+    if (user) {
+      generateToken(res, user._id, user.role);
+
+      res.status(201).json({
+        success: true,
+        message: 'Registration successful',
+        data: {
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            college: user.college,
+            studentId: user.studentId,
+            profileImage: user.profileImage,
+          }
+        }
+      });
+    } else {
+      res.status(400).json({ success: false, message: 'Invalid user data' });
+    }
+  } catch (error) {
+    console.error('[Auth] registerUser error:', error);
+    const message = error.code === 11000
+      ? 'User already exists'
+      : error.message || 'Registration failed';
+    res.status(500).json({ success: false, message });
   }
+};
 
-  // Check if user exists
-  const normalizedEmail = email.toLowerCase().trim();
-  const userExists = await User.findOne({ email: normalizedEmail });
+// @desc    Auth user & get token
+// @route   POST /api/auth/login
+// @access  Public
+export const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-  if (userExists) {
-    return res.status(409).json({ success: false, message: 'User already exists' });
-  }
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Please provide email and password' });
+    }
 
-  // Create user - explicitly exclude role from body to prevent admin injection
-  const user = await User.create({
-    name,
-    email: normalizedEmail,
-    password,
-    college,
-    studentId,
-    role: 'student' // Force student role
-  });
+    // Check for user email
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
-  if (user) {
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({ success: false, message: 'Account is inactive' });
+    }
+
+    const isMatch = await user.matchPassword(password);
+
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
     generateToken(res, user._id, user.role);
 
-    res.status(201).json({
+    res.json({
       success: true,
-      message: 'Registration successful',
+      message: 'Login successful',
       data: {
         user: {
           id: user._id,
@@ -48,56 +107,10 @@ export const registerUser = async (req, res) => {
         }
       }
     });
-  } else {
-    res.status(400).json({ success: false, message: 'Invalid user data' });
+  } catch (error) {
+    console.error('[Auth] loginUser error:', error);
+    res.status(500).json({ success: false, message: 'Login failed. Please try again.' });
   }
-};
-
-// @desc    Auth user & get token
-// @route   POST /api/auth/login
-// @access  Public
-export const loginUser = async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ success: false, message: 'Please provide email and password' });
-  }
-
-  // Check for user email
-  const normalizedEmail = email.toLowerCase().trim();
-  const user = await User.findOne({ email: normalizedEmail }).select('+password');
-
-  if (!user) {
-    return res.status(401).json({ success: false, message: 'Invalid credentials' });
-  }
-  
-  if (!user.isActive) {
-    return res.status(401).json({ success: false, message: 'Account is inactive' });
-  }
-
-  const isMatch = await user.matchPassword(password);
-
-  if (!isMatch) {
-    return res.status(401).json({ success: false, message: 'Invalid credentials' });
-  }
-
-  generateToken(res, user._id, user.role);
-
-  res.json({
-    success: true,
-    message: 'Login successful',
-    data: {
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        college: user.college,
-        studentId: user.studentId,
-        profileImage: user.profileImage,
-      }
-    }
-  });
 };
 
 // @desc    Get current user
@@ -127,7 +140,7 @@ export const logoutUser = (req, res) => {
   res.cookie('jwt', '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
     expires: new Date(0),
   });
 
@@ -138,9 +151,13 @@ export const logoutUser = (req, res) => {
 // @route   PUT /api/auth/profile
 // @access  Private
 export const updateProfile = async (req, res) => {
-  const user = await User.findById(req.user._id);
+  try {
+    const user = await User.findById(req.user._id);
 
-  if (user) {
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
     user.name = req.body.name || user.name;
     user.college = req.body.college !== undefined ? req.body.college : user.college;
     user.studentId = req.body.studentId !== undefined ? req.body.studentId : user.studentId;
@@ -150,13 +167,8 @@ export const updateProfile = async (req, res) => {
     }
 
     if (req.file) {
-      try {
-        const imageResult = await uploadImage(req.file.buffer, 'lost2found/profiles');
-        user.profileImage = imageResult.url;
-      } catch (error) {
-        console.error('[Auth] Profile image upload error:', error);
-        return res.status(500).json({ success: false, message: 'Image upload failed' });
-      }
+      const imageResult = await uploadImage(req.file.buffer, 'lost2found/profiles');
+      user.profileImage = imageResult.url;
     }
 
     const updatedUser = await user.save();
@@ -176,8 +188,12 @@ export const updateProfile = async (req, res) => {
         }
       }
     });
-  } else {
-    res.status(404).json({ success: false, message: 'User not found' });
+  } catch (error) {
+    console.error('[Auth] updateProfile error:', error);
+    const message = error.message?.includes('upload')
+      ? 'Image upload failed'
+      : error.message || 'Failed to update profile';
+    res.status(500).json({ success: false, message });
   }
 };
 

@@ -1,93 +1,71 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import Item from '../models/Item.js';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-
-// @desc    Chat with AI Assistant about lost/found items
+// @desc    Chat with Mock AI Assistant about lost/found items
 // @route   POST /api/ai/chat
 // @access  Private
 export const chatWithAssistant = async (req, res) => {
-  const { message, history } = req.body;
+  const { message } = req.body;
 
   if (!message) {
     return res.status(400).json({ success: false, message: 'Message is required' });
-  }
-
-  if (!process.env.GEMINI_API_KEY) {
-    return res.status(503).json({ success: false, message: 'AI service is not configured' });
   }
 
   try {
     // Fetch recent active items to provide context
     const items = await Item.find({ status: 'active' }).sort({ createdAt: -1 }).limit(50);
     
-    const formattedItems = items.map(item => ({
-      id: item._id,
-      type: item.type,
-      title: item.title,
-      category: item.category,
-      location: item.location,
-      date: item.date ? new Date(item.date).toISOString().split('T')[0] : 'unknown',
-      description: item.description,
-      color: item.color,
-      brand: item.brand,
-    }));
-
-    const systemPrompt = `You are a helpful and friendly AI assistant for "Lost2Found", a college campus lost and found platform.
-Your goal is to help users find items they lost or check if something they found has been reported.
-You have access to the current active items in the database (up to 50 recent items).
-
-Current Active Items:
-${JSON.stringify(formattedItems, null, 2)}
-
-Instructions:
-- If the user asks about an item, search the "Current Active Items" list and tell them if there are any potential matches.
-- Be conversational and polite.
-- If they ask for something that is found, provide details like the title, location, date, and category.
-- Do NOT provide raw item IDs in your response unless asked. Use natural language to describe items.
-- If there are no matches, encourage them to report the item themselves.
-- Keep your answers concise but helpful.`;
-
-    const model = genAI.getGenerativeModel({ model: modelName });
+    // Simple simulated AI logic (keyword matching)
+    const lowerMessage = message.toLowerCase();
     
-    // The frontend sends an initial greeting from 'ai'. 
-    // We must remove it to avoid consecutive 'model' roles which crashes Gemini.
-    const validHistory = (history || []).filter((msg, idx) => {
-      // Skip the very first AI greeting from frontend to maintain user/model alternation
-      if (idx === 0 && msg.role === 'ai') return false;
-      return true;
-    });
+    // Simulate thinking delay
+    await new Promise(resolve => setTimeout(resolve, 1200));
 
-    const chat = model.startChat({
-      history: [
-        {
-          role: "user",
-          parts: [{ text: systemPrompt }],
-        },
-        {
-          role: "model",
-          parts: [{ text: "Understood! I'm ready to help users find their lost items or match found items on the Lost2Found platform." }],
-        },
-        ...validHistory.map(msg => ({
-          role: msg.role === 'ai' ? 'model' : 'user',
-          parts: [{ text: msg.text }]
-        }))
-      ],
-    });
+    let reply = "I'm not sure I understand. Could you describe the item you lost or found (e.g., 'did anyone find a backpack' or 'I lost my keys')?";
 
-    const result = await chat.sendMessage(message);
-    const responseText = result.response.text();
+    // Greetings
+    if (lowerMessage.match(/\b(hi|hello|hey|howdy|greetings)\b/)) {
+      reply = "Hello there! I'm the Lost2Found AI. I can check our database for you. What are you looking for?";
+    }
+    // Asking how it is
+    else if (lowerMessage.match(/how are (u|you)/)) {
+      reply = "I'm just a simulated AI living in your code, but I'm doing great! How can I help you find an item today?";
+    }
+    // Searching for items
+    else if (lowerMessage.includes('find') || lowerMessage.includes('lost') || lowerMessage.includes('looking for') || lowerMessage.includes('search')) {
+      // Try to find matching items based on words in the user's message
+      const words = lowerMessage.replace(/[^a-z0-9 ]/g, '').split(' ').filter(w => w.length > 3);
+      
+      const matches = items.filter(item => {
+        const itemText = `${item.title} ${item.description} ${item.category} ${item.color} ${item.brand}`.toLowerCase();
+        return words.some(word => itemText.includes(word));
+      });
+
+      if (matches.length > 0) {
+        const item = matches[0]; // Just take the first match for simplicity
+        const itemType = item.type === 'found' ? 'found' : 'reported as lost';
+        reply = `I found a potential match in our database! A **${item.title}** was ${itemType} at the ${item.location}. Go to the Items page to see more details!`;
+      } else {
+        reply = "I've checked our recent database, but I couldn't find any items matching your description right now. You should consider creating a report so others can keep an eye out for it!";
+      }
+    }
+    // Generic question about the system
+    else if (lowerMessage.includes('what can you do') || lowerMessage.includes('help')) {
+      reply = "I can scan our database of lost and found items. Just tell me what you're looking for, like 'did anyone find a yellow backpack?' and I'll check for you!";
+    }
+    // Default fallback
+    else {
+      reply = "I've checked the latest reports. There's currently nothing matching that description. Is there anything else I can check for you?";
+    }
 
     res.json({
       success: true,
       data: {
-        reply: responseText
+        reply
       }
     });
 
   } catch (error) {
-    console.error('[AI Chat] Error:', error);
+    console.error('[AI Chat Mock] Error:', error);
     res.status(500).json({ success: false, message: 'AI failed to respond' });
   }
 };
