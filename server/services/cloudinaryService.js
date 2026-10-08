@@ -21,8 +21,9 @@ export const uploadImage = async (fileBuffer, folder = 'lost2found/items') => {
     
     fs.writeFileSync(filePath, fileBuffer);
     
+    const baseUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`;
     return {
-      url: `http://localhost:5000/uploads/${uniqueName}`,
+      url: `${baseUrl}/uploads/${uniqueName}`,
       publicId: `local-${uniqueName}`,
     };
   }

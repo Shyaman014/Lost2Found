@@ -1,4 +1,4 @@
-import React, { useContext, useState, useRef } from 'react';
+import React, { useContext, useState, useRef, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
 const Profile = () => {
@@ -16,6 +16,20 @@ const Profile = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Synchronize form and image preview when currentUser updates
+  useEffect(() => {
+    if (currentUser) {
+      setFormData({
+        name: currentUser.name || '',
+        college: currentUser.college || '',
+        studentId: currentUser.studentId || '',
+      });
+      if (!isEditing) {
+        setImagePreview(currentUser.profileImage || null);
+      }
+    }
+  }, [currentUser, isEditing]);
 
   if (!currentUser) return null;
 
@@ -36,6 +50,7 @@ const Profile = () => {
         setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
+      setError(null);
     }
   };
 
@@ -59,7 +74,7 @@ const Profile = () => {
         setSuccess(true);
         setIsEditing(false);
         setImageFile(null);
-        setImagePreview(null); // reset local preview; view mode reads from currentUser directly
+        if (fileInputRef.current) fileInputRef.current.value = '';
         setTimeout(() => setSuccess(false), 3000);
       } else {
         setError(res.message || 'Failed to update profile');
@@ -80,6 +95,7 @@ const Profile = () => {
     });
     setImagePreview(currentUser.profileImage || null);
     setImageFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setError(null);
   };
 
@@ -97,8 +113,8 @@ const Profile = () => {
             <div className="flex justify-between items-end -mt-12 mb-6">
               <div className="relative group">
                 <div className="h-24 w-24 rounded-2xl bg-white p-1.5 shadow-lg border border-slate-100 relative">
-                  {/* View mode: read directly from currentUser — no state race condition */}
-                  {/* Edit mode: show local file preview (imagePreview from FileReader) */}
+                  {/* View mode: read directly from currentUser */}
+                  {/* Edit mode: show preview if available */}
                   {isEditing ? (
                     imagePreview ? (
                       <img src={imagePreview} alt={currentUser.name} className="h-full w-full object-cover rounded-xl" />
@@ -121,10 +137,11 @@ const Profile = () => {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="absolute inset-1.5 bg-black/40 rounded-xl flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-sm"
+                      className="absolute inset-1.5 bg-black/45 hover:bg-black/60 rounded-xl flex flex-col items-center justify-center text-white transition-opacity cursor-pointer backdrop-blur-[2px]"
+                      title="Upload new profile picture"
                     >
                       <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                      <span className="text-xs font-medium">Upload</span>
+                      <span className="text-xs font-semibold">Change</span>
                     </button>
                   )}
                   <input
@@ -135,6 +152,23 @@ const Profile = () => {
                     className="hidden"
                   />
                 </div>
+                {isEditing && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                      {imageFile ? 'Change photo' : 'Upload photo'}
+                    </button>
+                    {imageFile && (
+                      <p className="text-[11px] text-emerald-600 font-medium mt-0.5 truncate max-w-[180px]">
+                        ✓ Selected: {imageFile.name}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               
               {!isEditing && (

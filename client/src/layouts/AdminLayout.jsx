@@ -121,9 +121,17 @@ const AdminLayout = () => {
 
         {/* User info */}
         <div className="flex items-center gap-2 px-3 py-2">
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm">
-            {currentUser?.name?.[0]?.toUpperCase() || 'A'}
-          </div>
+          {currentUser?.profileImage ? (
+            <img
+              src={currentUser.profileImage}
+              alt={currentUser.name}
+              className="w-8 h-8 rounded-full object-cover ring-1 ring-white/30"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm">
+              {currentUser?.name?.[0]?.toUpperCase() || 'A'}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-white text-sm font-medium truncate">{currentUser?.name}</p>
             <p className="text-indigo-300 text-xs truncate">{currentUser?.email}</p>
