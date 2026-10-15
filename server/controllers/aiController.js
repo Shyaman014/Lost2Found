@@ -1,71 +1,68 @@
-import Item from '../models/Item.js';
+import { processChat } from '../services/ai/chatService.js';
 
-// @desc    Chat with Mock AI Assistant about lost/found items
+// Input constraints (duplicated from chatService for early rejection before the service is called)
+const MAX_MESSAGE_LENGTH = 500;
+const MAX_HISTORY_LENGTH = 20; // maximum number of history entries accepted from client
+
+// @desc    Chat with Lost2Found AI Assistant (powered by Google Gemini)
 // @route   POST /api/ai/chat
 // @access  Private
 export const chatWithAssistant = async (req, res) => {
-  const { message } = req.body;
+  const { message, history } = req.body;
 
-  if (!message) {
-    return res.status(400).json({ success: false, message: 'Message is required' });
+  // ── Input Validation ────────────────────────────────────────────────────
+  if (!message || typeof message !== 'string') {
+    return res.status(400).json({ success: false, message: 'Message is required and must be a string.' });
   }
 
+  const trimmed = message.trim();
+
+  if (trimmed.length === 0) {
+    return res.status(400).json({ success: false, message: 'Message cannot be empty.' });
+  }
+
+  if (trimmed.length > MAX_MESSAGE_LENGTH) {
+    return res.status(400).json({
+      success: false,
+      message: `Message is too long. Maximum ${MAX_MESSAGE_LENGTH} characters allowed.`,
+    });
+  }
+
+  // Validate history shape — must be an array if provided
+  let safeHistory = [];
+  if (history !== undefined) {
+    if (!Array.isArray(history)) {
+      return res.status(400).json({ success: false, message: 'History must be an array.' });
+    }
+    // Truncate to avoid abuse; the service will sanitise further
+    safeHistory = history.slice(-MAX_HISTORY_LENGTH);
+  }
+
+  // ── Gemini Call ──────────────────────────────────────────────────────────
   try {
-    // Fetch recent active items to provide context
-    const items = await Item.find({ status: 'active' }).sort({ createdAt: -1 }).limit(50);
-    
-    // Simple simulated AI logic (keyword matching)
-    const lowerMessage = message.toLowerCase();
-    
-    // Simulate thinking delay
-    await new Promise(resolve => setTimeout(resolve, 1200));
+    const result = await processChat(trimmed, safeHistory);
 
-    let reply = "I'm not sure I understand. Could you describe the item you lost or found (e.g., 'did anyone find a backpack' or 'I lost my keys')?";
-
-    // Greetings
-    if (lowerMessage.match(/\b(hi|hello|hey|howdy|greetings)\b/)) {
-      reply = "Hello there! I'm the Lost2Found AI. I can check our database for you. What are you looking for?";
-    }
-    // Asking how it is
-    else if (lowerMessage.match(/how are (u|you)/)) {
-      reply = "I'm just a simulated AI living in your code, but I'm doing great! How can I help you find an item today?";
-    }
-    // Searching for items
-    else if (lowerMessage.includes('find') || lowerMessage.includes('lost') || lowerMessage.includes('looking for') || lowerMessage.includes('search')) {
-      // Try to find matching items based on words in the user's message
-      const words = lowerMessage.replace(/[^a-z0-9 ]/g, '').split(' ').filter(w => w.length > 3);
-      
-      const matches = items.filter(item => {
-        const itemText = `${item.title} ${item.description} ${item.category} ${item.color} ${item.brand}`.toLowerCase();
-        return words.some(word => itemText.includes(word));
+    // Surface a 429 hint when rate-limited so the client can back off
+    if (result.rateLimited) {
+      return res.status(429).json({
+        success: false,
+        message: result.reply,
+        rateLimited: true,
       });
-
-      if (matches.length > 0) {
-        const item = matches[0]; // Just take the first match for simplicity
-        const itemType = item.type === 'found' ? 'found' : 'reported as lost';
-        reply = `I found a potential match in our database! A **${item.title}** was ${itemType} at the ${item.location}. Go to the Items page to see more details!`;
-      } else {
-        reply = "I've checked our recent database, but I couldn't find any items matching your description right now. You should consider creating a report so others can keep an eye out for it!";
-      }
-    }
-    // Generic question about the system
-    else if (lowerMessage.includes('what can you do') || lowerMessage.includes('help')) {
-      reply = "I can scan our database of lost and found items. Just tell me what you're looking for, like 'did anyone find a yellow backpack?' and I'll check for you!";
-    }
-    // Default fallback
-    else {
-      reply = "I've checked the latest reports. There's currently nothing matching that description. Is there anything else I can check for you?";
     }
 
-    res.json({
+    return res.status(200).json({
       success: true,
       data: {
-        reply
-      }
+        reply:    result.reply,
+        fallback: result.fallback, // lets the client know if Gemini was unavailable
+      },
     });
-
   } catch (error) {
-    console.error('[AI Chat Mock] Error:', error);
-    res.status(500).json({ success: false, message: 'AI failed to respond' });
+    console.error('[AI Chat] Unhandled error:', error);
+    return res.status(500).json({
+      success: false,
+      message: "I'm having trouble responding right now. Please try again in a moment.",
+    });
   }
 };

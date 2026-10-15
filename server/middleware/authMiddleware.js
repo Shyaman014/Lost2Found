@@ -2,9 +2,12 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
 export const protect = async (req, res, next) => {
-  let token;
-  
-  token = req.cookies.jwt;
+  let token = req.cookies?.jwt;
+
+  // Support Authorization: Bearer <token> header as fallback
+  if (!token && req.headers?.authorization?.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
 
   if (token) {
     try {
@@ -28,6 +31,33 @@ export const protect = async (req, res, next) => {
   } else {
     res.status(401).json({ success: false, message: 'Not authorized, no token' });
   }
+};
+
+/**
+ * Optional authentication middleware:
+ * Populates req.user if a valid token is provided, but does not block unauthenticated requests.
+ */
+export const optionalProtect = async (req, res, next) => {
+  let token = req.cookies?.jwt;
+
+  if (!token && req.headers?.authorization?.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.userId).select('-password');
+      if (user && user.isActive) {
+        req.user = user;
+      }
+    } catch (error) {
+      // Invalid/expired token — proceed as unauthenticated guest
+      req.user = null;
+    }
+  }
+
+  next();
 };
 
 export const authorizeRoles = (...roles) => {

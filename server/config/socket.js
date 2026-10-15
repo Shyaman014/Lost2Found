@@ -19,8 +19,10 @@ export const initializeSocket = (server) => {
   // Socket Authentication Middleware
   io.use(async (socket, next) => {
     try {
-      const cookies = cookie.parse(socket.request.headers.cookie || '');
-      const token = cookies.jwt;
+      const parseCookie = cookie.parseCookie || cookie.parse;
+      const rawCookie = socket.request.headers.cookie || socket.handshake?.headers?.cookie || '';
+      const cookies = parseCookie(rawCookie);
+      let token = cookies.jwt || socket.handshake?.auth?.token;
 
       if (!token) {
         return next(new Error('Authentication error: No token provided'));
@@ -32,6 +34,10 @@ export const initializeSocket = (server) => {
 
       if (!user) {
         return next(new Error('Authentication error: User not found'));
+      }
+
+      if (!user.isActive) {
+        return next(new Error('Authentication error: Account is inactive'));
       }
 
       socket.user = user;
@@ -135,7 +141,6 @@ export const initializeSocket = (server) => {
         if (callback) callback({ success: true, message });
 
         // Determine if the recipient is actively in the room. If not, send a notification.
-        // Identify the other participant
         const recipientId = conversation.participants.find(
           (p) => p.toString() !== socket.user._id.toString()
         );
@@ -164,24 +169,54 @@ export const initializeSocket = (server) => {
       }
     });
 
-    // Handle typing indicators
-    socket.on('typing:start', (conversationId) => {
-      socket.to(`conversation:${conversationId}`).emit('typing:start', {
-        conversationId,
-        senderId: socket.user._id,
-      });
+    // Handle typing indicators (requires active conversation participant authorization)
+    socket.on('typing:start', async (conversationId) => {
+      try {
+        const conversation = await Conversation.findById(conversationId).lean();
+        if (!conversation || conversation.status !== 'active') return;
+
+        const isParticipant = conversation.participants.some(
+          (p) => p.toString() === socket.user._id.toString()
+        );
+        if (!isParticipant) return;
+
+        socket.to(`conversation:${conversationId}`).emit('typing:start', {
+          conversationId,
+        });
+      } catch (err) {
+        console.error('[Socket Typing Start Error]', err.message);
+      }
     });
 
-    socket.on('typing:stop', (conversationId) => {
-      socket.to(`conversation:${conversationId}`).emit('typing:stop', {
-        conversationId,
-        senderId: socket.user._id,
-      });
+    socket.on('typing:stop', async (conversationId) => {
+      try {
+        const conversation = await Conversation.findById(conversationId).lean();
+        if (!conversation || conversation.status !== 'active') return;
+
+        const isParticipant = conversation.participants.some(
+          (p) => p.toString() === socket.user._id.toString()
+        );
+        if (!isParticipant) return;
+
+        socket.to(`conversation:${conversationId}`).emit('typing:stop', {
+          conversationId,
+        });
+      } catch (err) {
+        console.error('[Socket Typing Stop Error]', err.message);
+      }
     });
 
-    // Handle read receipts
+    // Handle read receipts (requires participant authorization)
     socket.on('message:read', async (conversationId) => {
       try {
+        const conversation = await Conversation.findById(conversationId).lean();
+        if (!conversation) return;
+
+        const isParticipant = conversation.participants.some(
+          (p) => p.toString() === socket.user._id.toString()
+        );
+        if (!isParticipant) return;
+
         // Mark all unread messages from the OTHER participant as read
         const result = await Message.updateMany(
           {
@@ -197,7 +232,6 @@ export const initializeSocket = (server) => {
         if (result.modifiedCount > 0) {
           io.to(`conversation:${conversationId}`).emit('message:read', {
             conversationId,
-            readBy: socket.user._id,
             readAt: new Date(),
           });
         }

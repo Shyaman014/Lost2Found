@@ -14,7 +14,7 @@ const CATEGORY_IMAGES = {
   stationery:  'https://images.unsplash.com/photo-1517842645767-c639042777db?w=800&q=80',
   jewelry:     'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80',
   accessories: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&q=80',
-  other:       'https://images.unsplash.com/photo-1490818387583-1b0ba689a076?w=800&q=80',
+  other:       'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=800&q=80',
 };
 
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80';

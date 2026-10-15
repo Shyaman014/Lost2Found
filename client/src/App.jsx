@@ -72,16 +72,16 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="/items" element={<Items />} />
+          <Route path="/items/:id" element={<ItemDetails />} />
 
           {/* Protected Student Routes */}
           <Route element={<ProtectedRoute />}>
             <Route path="/profile" element={<Profile />} />
             <Route path="/messages" element={<Chat />} />
             <Route path="/messages/:id" element={<Chat />} />
-            <Route path="/items" element={<Items />} />
             <Route path="/my-items" element={<MyItems />} />
             <Route path="/my-claims" element={<MyClaims />} />
-            <Route path="/items/:id" element={<ItemDetails />} />
             <Route path="/items/:id/claims" element={<ItemClaimsReview />} />
             <Route path="/items/:id/edit" element={<EditItem />} />
             <Route path="/report-lost" element={<ReportLost />} />

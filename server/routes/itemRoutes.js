@@ -12,42 +12,41 @@ import {
 } from '../controllers/itemController.js';
 import { triggerMatching, getMatches } from '../controllers/matchController.js';
 import { createClaim, getItemClaims } from '../controllers/claimController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, optionalProtect } from '../middleware/authMiddleware.js';
 import upload from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
-router.use(protect); // All item routes require authentication
-
+// Publicly readable endpoints (optionalProtect attaches req.user if logged in)
 router.route('/')
-  .get(getItems)
-  .post(upload.single('image'), createItem);
+  .get(optionalProtect, getItems)
+  .post(protect, upload.single('image'), createItem);
 
 router.route('/my')
-  .get(getMyItems);
+  .get(protect, getMyItems);
 
 router.route('/:id')
-  .get(getItemById)
-  .put(upload.single('image'), updateItem)
-  .delete(deleteItem);
+  .get(optionalProtect, getItemById)
+  .put(protect, upload.single('image'), updateItem)
+  .delete(protect, deleteItem);
 
 router.route('/:id/image')
-  .delete(removeImage);
+  .delete(protect, removeImage);
 
 router.route('/:id/status')
-  .patch(updateItemStatus);
+  .patch(protect, updateItemStatus);
 
 router.route('/:id/returned')
-  .patch(markItemReturned);
+  .patch(protect, markItemReturned);
 
 router.route('/:id/match')
-  .post(triggerMatching);
+  .post(protect, triggerMatching);
 
 router.route('/:id/matches')
-  .get(getMatches);
+  .get(protect, getMatches);
 
 router.route('/:id/claims')
-  .post(createClaim)
-  .get(getItemClaims);
+  .post(protect, createClaim)
+  .get(protect, getItemClaims);
 
 export default router;

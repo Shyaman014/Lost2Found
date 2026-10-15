@@ -165,8 +165,10 @@ export const getItems = async (req, res) => {
     const sortObj = sortMap[sort] || sortMap['newest'];
 
     // --- Execute query with pagination ---
+    // Omit identifyingDetails from public/general listing to prevent fraud
     const [items, totalItems] = await Promise.all([
       Item.find(query)
+        .select('-identifyingDetails')
         .populate('reportedBy', 'name')
         .sort(sortObj)
         .skip(skip)
@@ -217,7 +219,7 @@ export const getMyItems = async (req, res) => {
 
 // @desc    Get single item
 // @route   GET /api/items/:id
-// @access  Private
+// @access  Public (optional auth)
 export const getItemById = async (req, res) => {
   try {
     const item = await Item.findById(req.params.id)
@@ -232,9 +234,19 @@ export const getItemById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
 
+    // Anti-fraud security: for found items, identifying details must only be visible
+    // to the reporter of the item or an admin.
+    const isReporter = req.user && item.reportedBy && (req.user._id.toString() === item.reportedBy._id.toString());
+    const isAdmin = req.user && req.user.role === 'admin';
+
+    const itemObj = item.toObject();
+    if (itemObj.type === 'found' && !isReporter && !isAdmin) {
+      delete itemObj.identifyingDetails;
+    }
+
     res.status(200).json({
       success: true,
-      data: { item }
+      data: { item: itemObj }
     });
   } catch (error) {
     if (error.kind === 'ObjectId') {
@@ -259,7 +271,19 @@ export const updateItem = async (req, res) => {
       return res.status(403).json({ success: false, message: 'You are not authorized to modify this item' });
     }
 
-    const { reportedBy, image, ...updateData } = req.body;
+    // Whitelist only user-editable fields to prevent privilege escalation / mass assignment
+    const allowedFields = [
+      'title', 'description', 'category', 'location', 'date', 'time',
+      'color', 'brand', 'identifyingDetails', 'contactPreference'
+    ];
+
+    const updateData = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    }
+
     let newImageData = item.image; // default to existing
     let oldPublicIdToDelete = null;
 
@@ -280,7 +304,7 @@ export const updateItem = async (req, res) => {
 
     item = await Item.findByIdAndUpdate(
       req.params.id,
-      updateData,
+      { $set: updateData },
       { new: true, runValidators: true }
     );
 

@@ -3,6 +3,7 @@ import Claim from '../models/Claim.js';
 import Item from '../models/Item.js';
 import Match from '../models/Match.js';
 import Conversation from '../models/Conversation.js';
+import { createNotification } from '../services/notificationService.js';
 
 // ─── Create Claim ──────────────────────────────────────────────────────────
 // @desc    Create a claim for a found item
@@ -50,6 +51,17 @@ export const createClaim = async (req, res) => {
       },
       status: 'pending',
     });
+
+    // Notify the finder that a new claim has been submitted
+    createNotification({
+      recipient: item.reportedBy,
+      type: 'claim_submitted',
+      title: 'New Claim Received',
+      message: `A new claim has been submitted for your found item "${item.title}".`,
+      actionUrl: `/items/${item._id}/claims`,
+      relatedItem: item._id,
+      relatedClaim: claim._id,
+    }).catch(err => console.error('[Claim] Failed to send notification:', err.message));
 
     res.status(201).json({
       success: true,
@@ -148,42 +160,79 @@ export const cancelClaim = async (req, res) => {
 // @route   PATCH /api/claims/:id/approve
 // @access  Private (Finder only)
 export const approveClaim = async (req, res) => {
-  // Use transaction to ensure consistency between Claim and Item states
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // Only start transactions if connected to a replica set or sharded cluster
+  const isReplicaSet = Boolean(
+    mongoose.connection?.client?.topology?.description?.setName ||
+    ['ReplicaSetWithPrimary', 'Sharded'].includes(mongoose.connection?.client?.topology?.description?.type)
+  );
+
+  let session = null;
+  if (isReplicaSet) {
+    try {
+      session = await mongoose.startSession();
+      session.startTransaction();
+    } catch (txErr) {
+      session = null;
+    }
+  }
+
+  const sessionOpt = session ? { session } : {};
 
   try {
-    const claim = await Claim.findById(req.params.id).session(session);
+    const claimQuery = Claim.findById(req.params.id);
+    if (session) claimQuery.session(session);
+    const claim = await claimQuery;
 
     if (!claim) {
-      await session.abortTransaction();
-      session.endSession();
+      if (session && session.inTransaction()) await session.abortTransaction();
       return res.status(404).json({ success: false, message: 'Claim not found' });
     }
 
     if (claim.status !== 'pending') {
-      await session.abortTransaction();
-      session.endSession();
+      if (session && session.inTransaction()) await session.abortTransaction();
       return res.status(400).json({ success: false, message: `Claim is already ${claim.status}` });
     }
 
-    const item = await Item.findById(claim.item).session(session);
+    const itemQuery = Item.findById(claim.item);
+    if (session) itemQuery.session(session);
+    const item = await itemQuery;
     
+    if (!item) {
+      if (session && session.inTransaction()) await session.abortTransaction();
+      return res.status(404).json({ success: false, message: 'Associated item not found' });
+    }
+
     if (item.reportedBy.toString() !== req.user._id.toString()) {
-      await session.abortTransaction();
-      session.endSession();
+      if (session && session.inTransaction()) await session.abortTransaction();
       return res.status(403).json({ success: false, message: 'Not authorized to approve claims for this item' });
+    }
+
+    if (item.status !== 'active') {
+      if (session && session.inTransaction()) await session.abortTransaction();
+      return res.status(400).json({ success: false, message: `Item is no longer active (status: ${item.status})` });
+    }
+
+    if (item.moderationStatus === 'removed') {
+      if (session && session.inTransaction()) await session.abortTransaction();
+      return res.status(400).json({ success: false, message: 'This item has been removed by platform moderation' });
     }
 
     // Update the approved claim
     claim.status = 'approved';
     claim.reviewedBy = req.user._id;
     claim.reviewedAt = new Date();
-    await claim.save({ session });
+    await claim.save(sessionOpt);
 
     // Update the item status
     item.status = 'claimed';
-    await item.save({ session });
+    await item.save(sessionOpt);
+
+    // Find rival claimants before updating to notify them
+    const rivalClaims = await Claim.find({
+      item: item._id,
+      _id: { $ne: claim._id },
+      status: 'pending'
+    }).select('claimant');
 
     // Reject all other pending claims for this item
     await Claim.updateMany(
@@ -196,11 +245,14 @@ export const approveClaim = async (req, res) => {
           reviewedAt: new Date()
         }
       },
-      { session }
+      sessionOpt
     );
 
     // Create Conversation between Finder (req.user._id) and Claimant (claim.claimant)
-    let conversation = await Conversation.findOne({ claim: claim._id }).session(session);
+    const convQuery = Conversation.findOne({ claim: claim._id });
+    if (session) convQuery.session(session);
+    let conversation = await convQuery;
+
     if (!conversation) {
       conversation = new Conversation({
         item: item._id,
@@ -208,11 +260,37 @@ export const approveClaim = async (req, res) => {
         participants: [item.reportedBy, claim.claimant],
         status: 'active',
       });
-      await conversation.save({ session });
+      await conversation.save(sessionOpt);
     }
 
-    await session.commitTransaction();
-    session.endSession();
+    if (session && session.inTransaction()) {
+      await session.commitTransaction();
+    }
+
+    // ── Dispatches Real-Time Notifications ──
+    // 1. Notify approved claimant
+    createNotification({
+      recipient: claim.claimant,
+      type: 'claim_approved',
+      title: 'Claim Approved!',
+      message: `Your claim for "${item.title}" has been approved! You can now chat anonymously with the finder.`,
+      actionUrl: `/messages/${conversation._id}`,
+      relatedItem: item._id,
+      relatedClaim: claim._id,
+      relatedConversation: conversation._id,
+    }).catch(err => console.error('[Claim] Failed to send approval notification:', err.message));
+
+    // 2. Notify rival claimants of rejection
+    for (const rival of rivalClaims) {
+      createNotification({
+        recipient: rival.claimant,
+        type: 'claim_rejected',
+        title: 'Claim Update',
+        message: `Your claim for "${item.title}" was not approved because another claim was verified.`,
+        actionUrl: '/my-claims',
+        relatedItem: item._id,
+      }).catch(err => console.error('[Claim] Failed to notify rival claimant:', err.message));
+    }
 
     res.status(200).json({
       success: true,
@@ -220,9 +298,15 @@ export const approveClaim = async (req, res) => {
       data: { claim, conversation },
     });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+    if (session && session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    console.error('[approveClaim error]:', error);
     res.status(500).json({ success: false, message: 'Server error while approving claim' });
+  } finally {
+    if (session) {
+      session.endSession();
+    }
   }
 };
 
@@ -236,6 +320,10 @@ export const rejectClaim = async (req, res) => {
 
     if (!claim) {
       return res.status(404).json({ success: false, message: 'Claim not found' });
+    }
+
+    if (!claim.item) {
+      return res.status(404).json({ success: false, message: 'Associated item not found' });
     }
 
     if (claim.item.reportedBy.toString() !== req.user._id.toString()) {
@@ -254,6 +342,17 @@ export const rejectClaim = async (req, res) => {
     claim.reviewedAt = new Date();
     
     await claim.save();
+
+    // Notify the claimant of rejection
+    createNotification({
+      recipient: claim.claimant,
+      type: 'claim_rejected',
+      title: 'Claim Update',
+      message: `Your claim for "${claim.item?.title || 'an item'}" was rejected: ${claim.rejectionReason}`,
+      actionUrl: '/my-claims',
+      relatedItem: claim.item?._id,
+      relatedClaim: claim._id,
+    }).catch(err => console.error('[Claim] Failed to send rejection notification:', err.message));
 
     res.status(200).json({
       success: true,

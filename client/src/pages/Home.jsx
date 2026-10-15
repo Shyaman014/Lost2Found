@@ -1,332 +1,528 @@
-import React, { useContext } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useContext, useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import itemService from '../services/itemService';
+import ItemCard from '../components/ItemCard';
 
-/* ──────────────────────────────────
-   Color palette used throughout:
-   • Slate dark  #0F172A  (hero bg)
-   • Indigo      #4F46E5  (brand)
-   • Violet      #7C3AED  (gradient)
-   • Amber       #F59E0B  (warm accent)
-   • Rose        #F43F5E  (lost / urgent)
-   • Emerald     #10B981  (found / success)
-   • Warm white  #FFFBF5  (section bg)
-────────────────────────────────── */
-
-const Stat = ({ value, label, icon, color }) => (
-  <div className="flex flex-col items-center">
-    <span className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mb-3 ${color}`}>{icon}</span>
-    <span className="text-3xl font-extrabold text-white">{value}</span>
-    <span className="text-slate-400 text-sm mt-0.5">{label}</span>
-  </div>
-);
-
-const Step = ({ step, icon, title, desc, accent, textAccent }) => (
-  <div className={`relative rounded-2xl p-7 border ${accent} bg-white hover:shadow-lg transition-shadow group overflow-hidden`}>
-    <div className="absolute -bottom-4 -right-4 text-8xl font-black opacity-5 select-none group-hover:opacity-10 transition-opacity">
-      {step}
-    </div>
-    <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl mb-5 ${textAccent}`}>
-      {icon}
-    </div>
-    <div className={`text-xs font-bold uppercase tracking-widest mb-2 ${textAccent.replace('bg-', 'text-').split(' ')[1] || 'text-indigo-600'}`}>
-      Step {step}
-    </div>
-    <h3 className="text-lg font-bold text-slate-900 mb-2">{title}</h3>
-    <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
-  </div>
-);
+const POPULAR_SEARCHES = ['AirPods', 'Student ID', 'Car Keys', 'Backpack', 'Water Bottle', 'Calculator'];
 
 const Home = () => {
   const { isAuthenticated } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Live items state & filter
+  const [itemTypeFilter, setItemTypeFilter] = useState('all'); // 'all' | 'lost' | 'found'
+  const [recentItems, setRecentItems] = useState([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [itemError, setItemError] = useState(null);
+  const [requiresAuthToView, setRequiresAuthToView] = useState(false);
+
+  // Fetch real recently reported items (publicly accessible on homepage)
+  const fetchRecentItems = useCallback(async (type) => {
+    setLoadingItems(true);
+    setItemError(null);
+    setRequiresAuthToView(false);
+
+    try {
+      const params = {
+        limit: 12,
+        sort: 'newest',
+        status: 'active',
+      };
+      if (type && type !== 'all') {
+        params.type = type;
+      }
+
+      const res = await itemService.getItems(params);
+      if (res.success && res.data) {
+        setRecentItems(res.data.items || []);
+      } else {
+        setItemError(res.message || 'Unable to load items.');
+      }
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setRequiresAuthToView(true);
+      } else {
+        setItemError('Unable to load recently reported items.');
+      }
+    } finally {
+      setLoadingItems(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRecentItems(itemTypeFilter);
+  }, [fetchRecentItems, itemTypeFilter]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const query = searchQuery.trim();
+    if (query) {
+      navigate(`/items?search=${encodeURIComponent(query)}`);
+    } else {
+      navigate('/items');
+    }
+  };
+
+  const handleQuickSearch = (term) => {
+    setSearchQuery(term);
+    navigate(`/items?search=${encodeURIComponent(term)}`);
+  };
 
   return (
-    <div className="bg-white">
+    <div className="bg-slate-50/50 min-h-screen">
 
-      {/* ════════════════════════════════════
-          HERO — Dark slate + colorful accents
-      ════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-slate-950">
-        {/* Colorful glow blobs */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/30 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-10 right-1/4 w-72 h-72 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-10 w-64 h-64 bg-rose-500/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-10 w-64 h-64 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
+      {/* ══════════════════════════════════════════════════════════════
+          1. HERO SECTION — Clean SaaS aesthetic with strong search
+      ══════════════════════════════════════════════════════════════ */}
+      <section className="relative overflow-hidden bg-white border-b border-slate-200/80 pt-16 pb-20 lg:pt-24 lg:pb-28">
+        {/* Subtle mesh background */}
+        <div className="absolute inset-0 bg-saas-mesh pointer-events-none opacity-60" />
+        <div className="absolute inset-0 bg-grid-pattern opacity-[0.25] pointer-events-none" />
 
-        {/* Subtle grid overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.04] pointer-events-none"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)',
-            backgroundSize: '40px 40px'
-          }}
-        />
-
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-20 text-center">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          
           {/* Badge */}
-          <span className="inline-flex items-center gap-2 border border-white/10 bg-white/5 text-slate-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-8 backdrop-blur-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            AI-Powered Campus Lost &amp; Found
-          </span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-100/80 text-indigo-700 text-xs font-semibold mb-6 anim-fade-down shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+            <span>Intelligent Campus Lost &amp; Found Platform</span>
+          </div>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1]">
-            <span className="text-white">Lost something?</span><br />
-            <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-rose-400 bg-clip-text text-transparent">
-              We'll help you find it.
+          {/* Heading */}
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.15] mb-5 anim-fade-up">
+            Lost something on campus? <br className="hidden sm:inline" />
+            <span className="text-indigo-600">
+              Recover it with AI accuracy.
             </span>
           </h1>
 
-          <p className="mt-7 text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-            Report lost or found items on campus. Our Gemini AI connects owners with finders —{' '}
-            <span className="text-amber-400 font-medium">fast</span>,{' '}
-            <span className="text-emerald-400 font-medium">secure</span>, and{' '}
-            <span className="text-violet-400 font-medium">effortless</span>.
+          {/* Subtitle */}
+          <p className="max-w-2xl mx-auto text-sm sm:text-lg text-slate-600 leading-relaxed mb-8 anim-fade-up delay-100">
+            Lost2Found connects students, faculty, and campus staff. Report missing items or discoveries, and let Gemini AI automatically match them in real-time.
           </p>
 
-          {/* CTA buttons */}
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              to={isAuthenticated ? '/report-lost' : '/register'}
-              className="w-full sm:w-auto px-8 py-3.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-rose-500/25 text-base flex items-center justify-center gap-2"
+          {/* Strong Search Bar */}
+          <div className="max-w-2xl mx-auto mb-6 anim-fade-up delay-200">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="relative flex items-center p-1.5 sm:p-2 bg-white rounded-2xl border-2 border-indigo-100 shadow-lg shadow-indigo-500/5 focus-within:border-indigo-600 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all"
             >
-              <span>😞</span> Report Lost Item
-            </Link>
-            <Link
-              to={isAuthenticated ? '/report-found' : '/register'}
-              className="w-full sm:w-auto px-8 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/25 text-base flex items-center justify-center gap-2"
-            >
-              <span>🎉</span> Report Found Item
-            </Link>
-            <Link
-              to="/items"
-              className="w-full sm:w-auto px-8 py-3.5 border border-white/15 bg-white/5 hover:bg-white/10 text-slate-300 font-medium rounded-xl transition-all text-base"
-            >
-              Browse Items →
-            </Link>
-          </div>
-
-          {!isAuthenticated && (
-            <p className="mt-5 text-slate-500 text-sm">
-              Already have an account?{' '}
-              <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-medium underline underline-offset-2 transition-colors">
-                Sign in
-              </Link>
-            </p>
-          )}
-        </div>
-
-        {/* Stats bar */}
-        <div className="relative border-t border-white/5 bg-white/3">
-          <div className="max-w-4xl mx-auto px-4 py-10 grid grid-cols-2 sm:grid-cols-4 gap-8">
-            <Stat value="500+"  label="Items Reported"   icon="📦" color="bg-indigo-500/20" />
-            <Stat value="350+"  label="Matches Found"    icon="🤝" color="bg-amber-500/20" />
-            <Stat value="200+"  label="Items Returned"   icon="✅" color="bg-emerald-500/20" />
-            <Stat value="1000+" label="Students Helped"  icon="🎓" color="bg-violet-500/20" />
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════
-          HOW IT WORKS — Warm white bg
-      ════════════════════════════════════ */}
-      <section className="py-24 bg-[#FFFBF5] px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="inline-block text-amber-600 bg-amber-50 border border-amber-100 text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full mb-3">
-              Simple Process
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">How Lost2Found works</h2>
-            <p className="mt-3 text-slate-500 max-w-xl mx-auto">
-              Three simple steps to reunite lost items with their owners.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Step
-              step="01"
-              icon="📝"
-              title="Report the Item"
-              desc="Fill out a quick form — item name, description, location, and a photo. Takes less than 2 minutes."
-              accent="border-rose-100"
-              textAccent="bg-rose-50 text-rose-500"
-            />
-            <Step
-              step="02"
-              icon="🤖"
-              title="AI Finds Matches"
-              desc="Gemini AI scans all reports and surfaces the best matches based on description, category, and location."
-              accent="border-indigo-100"
-              textAccent="bg-indigo-50 text-indigo-500"
-            />
-            <Step
-              step="03"
-              icon="🤝"
-              title="Connect & Return"
-              desc="Chat securely, verify ownership, and coordinate the handoff — all inside the platform."
-              accent="border-emerald-100"
-              textAccent="bg-emerald-50 text-emerald-500"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════
-          FEATURES — White bg, 2-col layout
-      ════════════════════════════════════ */}
-      <section className="py-24 bg-white px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-
-          {/* Mock item feed */}
-          <div className="relative rounded-3xl overflow-hidden border border-slate-100 shadow-xl shadow-slate-100 bg-slate-50 p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-5">
-              <span className="text-sm font-bold text-slate-700">Recent Reports</span>
-              <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> Live
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {[
-                { emoji: '🎒', title: 'Black Nike Backpack', loc: 'Library, 2nd Floor', tag: 'Found', tagColor: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-200' },
-                { emoji: '📱', title: 'iPhone 15 Pro — Silver', loc: 'Cafeteria Block B', tag: 'Lost', tagColor: 'bg-rose-100 text-rose-700', border: 'border-rose-200' },
-                { emoji: '🔑', title: 'Car Keys — Honda', loc: 'Parking Lot 3', tag: 'Found', tagColor: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-200' },
-                { emoji: '💳', title: 'Student ID Card', loc: 'Main Gate', tag: 'Lost', tagColor: 'bg-rose-100 text-rose-700', border: 'border-rose-200' },
-                { emoji: '👓', title: 'Prescription Glasses', loc: 'Seminar Hall A', tag: 'Found', tagColor: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-200' },
-              ].map((item, i) => (
-                <div key={i} className={`flex items-center gap-3 bg-white rounded-xl px-4 py-3 border ${item.border} hover:shadow-sm transition-shadow`}>
-                  <span className="text-2xl">{item.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{item.title}</p>
-                    <p className="text-xs text-slate-400">{item.loc}</p>
-                  </div>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${item.tagColor}`}>{item.tag}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* AI match banner */}
-            <div className="mt-5 bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-100 rounded-xl px-4 py-3 flex items-center gap-3">
-              <span className="text-2xl">🤖</span>
-              <div>
-                <p className="text-xs font-bold text-indigo-700">AI Match Found!</p>
-                <p className="text-xs text-indigo-500">iPhone 15 → 94% match with report #1042</p>
+              <div className="pl-2.5 sm:pl-3.5 pr-1.5 sm:pr-2 text-slate-400 shrink-0">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
-              <span className="ml-auto text-xs bg-indigo-600 text-white font-semibold px-3 py-1 rounded-full">View</span>
-            </div>
-          </div>
 
-          {/* Features list */}
-          <div>
-            <span className="inline-block text-violet-600 bg-violet-50 border border-violet-100 text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full mb-4">
-              Why Lost2Found?
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-8 leading-tight">
-              Everything you need to recover<br />
-              <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">what matters to you</span>
-            </h2>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search lost & found items (e.g. blue Hydro Flask, student ID)..."
+                className="w-full bg-transparent border-none text-slate-900 placeholder:text-slate-400 text-xs sm:text-base focus:outline-none py-1.5 sm:py-2"
+              />
 
-            <div className="space-y-6">
-              {[
-                { icon: '🤖', color: 'bg-indigo-50', title: 'AI-Powered Smart Matching', desc: 'Gemini AI compares lost and found reports and surfaces probable matches automatically — no manual searching.' },
-                { icon: '💬', color: 'bg-amber-50', title: 'Secure In-App Messaging', desc: 'Chat directly through built-in real-time messaging. No phone numbers shared, ever.' },
-                { icon: '🔔', color: 'bg-rose-50', title: 'Instant Notifications', desc: 'Get notified the moment a match is found, a claim is submitted, or a message arrives.' },
-                { icon: '🛡️', color: 'bg-emerald-50', title: 'Verified Campus Community', desc: 'Every account is tied to a student ID — keeping the community safe, trusted, and honest.' },
-              ].map((f, i) => (
-                <div key={i} className="flex gap-4 group">
-                  <div className={`flex-shrink-0 w-11 h-11 rounded-xl ${f.color} flex items-center justify-center text-xl group-hover:scale-105 transition-transform`}>
-                    {f.icon}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900 mb-1">{f.title}</h4>
-                    <p className="text-slate-500 text-sm leading-relaxed">{f.desc}</p>
-                  </div>
-                </div>
+              <button
+                type="submit"
+                className="btn-primary shrink-0 py-2 sm:py-2.5 px-3.5 sm:px-5 text-xs sm:text-sm rounded-xl font-semibold shadow-xs"
+              >
+                Search
+              </button>
+            </form>
+
+            {/* Popular quick-tags */}
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-xs text-slate-500">
+              <span className="font-semibold text-slate-600 mr-1">Popular:</span>
+              {POPULAR_SEARCHES.map((term) => (
+                <button
+                  key={term}
+                  type="button"
+                  onClick={() => handleQuickSearch(term)}
+                  className="px-2.5 py-1 rounded-md bg-slate-100/80 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 font-medium transition-colors cursor-pointer border border-slate-200/50"
+                >
+                  {term}
+                </button>
               ))}
             </div>
+          </div>
 
-            <div className="mt-10 flex flex-wrap gap-3">
-              <Link to={isAuthenticated ? '/items' : '/register'} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-md shadow-indigo-100 text-sm">
-                {isAuthenticated ? 'Browse Items →' : 'Get Started Free →'}
-              </Link>
-              <Link to="/items" className="px-6 py-3 border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium rounded-xl transition-colors text-sm">
-                View All Items
+          {/* ══════════════════════════════════════════════════════════════
+              2. REPORT LOST & FOUND ACTION CARDS (DUAL ACTIONS)
+          ══════════════════════════════════════════════════════════════ */}
+          <div className="mt-12 max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-5 text-left anim-fade-up delay-300">
+            
+            {/* Card A: Report Lost */}
+            <div className="card-saas p-6 border-slate-200/90 hover:border-rose-300 hover:shadow-md transition-all group bg-gradient-to-br from-white via-white to-rose-50/30">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-11 h-11 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl font-bold shadow-xs group-hover:scale-105 transition-transform">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <span className="badge-lost text-[11px]">Action</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-1.5 group-hover:text-rose-600 transition-colors">
+                I Lost Something
+              </h3>
+              <p className="text-slate-500 text-sm leading-relaxed mb-6">
+                Post description, photos, and location. Our Gemini AI automatically scans campus found inventory for high-confidence matches.
+              </p>
+              <Link
+                to={isAuthenticated ? '/report-lost' : '/login'}
+                className="btn-lost w-full text-center"
+              >
+                <span>Report Lost Item</span>
+                <span aria-hidden="true">→</span>
               </Link>
             </div>
+
+            {/* Card B: Report Found */}
+            <div className="card-saas p-6 border-slate-200/90 hover:border-emerald-300 hover:shadow-md transition-all group bg-gradient-to-br from-white via-white to-emerald-50/30">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl font-bold shadow-xs group-hover:scale-105 transition-transform">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <span className="badge-found text-[11px]">Action</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-1.5 group-hover:text-emerald-600 transition-colors">
+                I Found Something
+              </h3>
+              <p className="text-slate-500 text-sm leading-relaxed mb-6">
+                Be a campus hero. Upload details and handoff location so the rightful owner can verify ownership and reclaim their possession.
+              </p>
+              <Link
+                to={isAuthenticated ? '/report-found' : '/login'}
+                className="btn-found w-full text-center"
+              >
+                <span>Report Found Item</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+
           </div>
+
         </div>
       </section>
 
-      {/* ════════════════════════════════════
-          CATEGORY QUICK LINKS
-      ════════════════════════════════════ */}
-      <section className="py-20 bg-slate-50 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <span className="inline-block text-emerald-700 bg-emerald-50 border border-emerald-100 text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full mb-3">
-              Common Categories
-            </span>
-            <h2 className="text-3xl font-extrabold text-slate-900">What people lose most</h2>
+      {/* ══════════════════════════════════════════════════════════════
+          3. REAL RECENTLY REPORTED ITEMS & LOST/FOUND FILTERS
+      ══════════════════════════════════════════════════════════════ */}
+      <section className="py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* Section Header with Lost / Found Filters */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-6 border-b border-slate-200/80">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse" />
+              Live Campus Feed
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Recently Reported Items
+            </h2>
+            <p className="text-slate-500 text-sm mt-1">
+              Real-time updates directly from campus buildings, classrooms, and libraries.
+            </p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-            {[
-              { icon: '📱', label: 'Electronics', color: 'from-indigo-50 to-indigo-100 border-indigo-200 text-indigo-700' },
-              { icon: '🔑', label: 'Keys', color: 'from-amber-50 to-amber-100 border-amber-200 text-amber-700' },
-              { icon: '💳', label: 'Cards & IDs', color: 'from-rose-50 to-rose-100 border-rose-200 text-rose-700' },
-              { icon: '🎒', label: 'Bags', color: 'from-violet-50 to-violet-100 border-violet-200 text-violet-700' },
-              { icon: '👓', label: 'Glasses', color: 'from-sky-50 to-sky-100 border-sky-200 text-sky-700' },
-              { icon: '📚', label: 'Books', color: 'from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-700' },
-            ].map((cat, i) => (
-              <Link
-                key={i}
-                to="/items"
-                className={`flex flex-col items-center gap-2.5 py-6 rounded-2xl border bg-gradient-to-b ${cat.color} hover:shadow-md transition-all hover:-translate-y-0.5 group`}
-              >
-                <span className="text-3xl group-hover:scale-110 transition-transform">{cat.icon}</span>
-                <span className="text-xs font-bold">{cat.label}</span>
+
+          {/* Lost / Found Filter Pills */}
+          <div className="flex items-center gap-1.5 p-1 bg-white rounded-xl border border-slate-200 shadow-xs shrink-0 max-w-full overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setItemTypeFilter('all')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                itemTypeFilter === 'all'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              All Items
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setItemTypeFilter('lost')}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                itemTypeFilter === 'lost'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-rose-600 hover:bg-rose-50'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${itemTypeFilter === 'lost' ? 'bg-white' : 'bg-rose-500'}`} />
+              Lost
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setItemTypeFilter('found')}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                itemTypeFilter === 'found'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-emerald-600 hover:bg-emerald-50'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${itemTypeFilter === 'found' ? 'bg-white' : 'bg-emerald-500'}`} />
+              Found
+            </button>
+          </div>
+        </div>
+
+        {/* Real Content States */}
+        {requiresAuthToView ? (
+          /* When guest views the site, campus records are kept secure */
+          <div className="card-saas p-10 sm:p-14 text-center max-w-2xl mx-auto border-indigo-100 bg-gradient-to-b from-white to-indigo-50/30">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 mx-auto flex items-center justify-center text-2xl mb-4 shadow-xs">
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">
+              Campus Privacy Protected
+            </h3>
+            <p className="text-slate-600 text-sm max-w-md mx-auto mb-6 leading-relaxed">
+              Live reports, item images, and claim histories are restricted to verified campus members. Sign in with your student credentials to view the live feed.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link to="/login" className="btn-primary w-full sm:w-auto px-6 py-2.5">
+                Sign In to View
               </Link>
+              <Link to="/register" className="btn-secondary w-full sm:w-auto px-6 py-2.5">
+                Register Student Account
+              </Link>
+            </div>
+          </div>
+        ) : loadingItems ? (
+          /* Loading Skeletons */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="card-saas overflow-hidden animate-pulse">
+                <div className="h-48 bg-slate-200" />
+                <div className="p-5 space-y-3">
+                  <div className="h-3 bg-slate-200 rounded-md w-1/4" />
+                  <div className="h-5 bg-slate-200 rounded-md w-3/4" />
+                  <div className="h-3 bg-slate-200 rounded-md w-1/2" />
+                </div>
+              </div>
             ))}
           </div>
+        ) : itemError ? (
+          /* Error state */
+          <div className="card-saas p-10 text-center max-w-lg mx-auto">
+            <p className="text-rose-600 font-semibold mb-3 text-sm">{itemError}</p>
+            <button
+              type="button"
+              onClick={() => fetchRecentItems(itemTypeFilter)}
+              className="btn-secondary text-xs"
+            >
+              Retry loading items
+            </button>
+          </div>
+        ) : recentItems.length === 0 ? (
+          /* Empty state */
+          <div className="card-saas p-12 text-center max-w-lg mx-auto border-dashed">
+            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mb-1">
+              No {itemTypeFilter !== 'all' ? itemTypeFilter : ''} items reported yet
+            </h3>
+            <p className="text-slate-500 text-xs mb-5">
+              Be the first to report an item in this category to help our campus community.
+            </p>
+            <Link
+              to={itemTypeFilter === 'found' ? '/report-found' : '/report-lost'}
+              className="btn-primary text-xs"
+            >
+              + File a Report
+            </Link>
+          </div>
+        ) : (
+          /* Real items grid */
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recentItems.map((item) => (
+                <ItemCard key={item._id} item={item} />
+              ))}
+            </div>
+
+            {/* Bottom link to all items */}
+            <div className="mt-10 text-center">
+              <Link
+                to={itemTypeFilter === 'all' ? '/items' : `/items?type=${itemTypeFilter}`}
+                className="btn-secondary px-6 py-2.5 font-semibold text-sm shadow-xs hover:border-indigo-300"
+              >
+                <span>Browse all {itemTypeFilter !== 'all' ? itemTypeFilter : ''} campus items</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          </>
+        )}
+
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════
+          4. HOW IT WORKS — Streamlined SaaS 3-step workflow
+      ══════════════════════════════════════════════════════════════ */}
+      <section className="py-16 sm:py-20 bg-white border-y border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">
+              Streamlined Flow
+            </span>
+            <h2 className="text-3xl font-extrabold text-slate-900 mt-2 tracking-tight">
+              How Lost2Found Works
+            </h2>
+            <p className="text-slate-500 text-sm mt-2">
+              Three seamless steps from misplacing an item to returning it safely.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Step 1 */}
+            <div className="card-saas p-7 relative">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 font-extrabold text-sm flex items-center justify-center mb-5 border border-rose-100">
+                01
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">
+                1. Report the Item
+              </h3>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                Fill in the item category, brand, color, last known campus location, and a photo in under two minutes.
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="card-saas p-7 relative">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 font-extrabold text-sm flex items-center justify-center mb-5 border border-indigo-100">
+                02
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">
+                2. AI Matches in Background
+              </h3>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                Gemini AI compares textual attributes and locations against live inventory to surface high-probability matches automatically.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="card-saas p-7 relative">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 font-extrabold text-sm flex items-center justify-center mb-5 border border-emerald-100">
+                03
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">
+                3. Secure Verification &amp; Return
+              </h3>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                Connect via in-app real-time chat, verify identifying details, and coordinate an on-campus exchange safely.
+              </p>
+            </div>
+          </div>
+
         </div>
       </section>
 
-      {/* ════════════════════════════════════
-          CTA BANNER — Dark with amber accent
-      ════════════════════════════════════ */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-5xl mx-auto">
-          <div className="relative rounded-3xl overflow-hidden bg-slate-950 px-8 py-16 text-center shadow-2xl">
-            {/* Decorative blobs */}
-            <div className="absolute top-0 left-1/3 w-64 h-64 bg-amber-500/15 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 right-1/3 w-64 h-64 bg-indigo-600/20 rounded-full blur-3xl" />
-
-            <div className="relative">
-              <span className="inline-flex items-center gap-2 bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6">
-                🎓 For College Students
-              </span>
-              <h2 className="text-3xl sm:text-5xl font-extrabold text-white mb-4 leading-tight">
-                Lost something on campus?<br />
-                <span className="bg-gradient-to-r from-amber-400 to-rose-400 bg-clip-text text-transparent">
-                  Don't lose hope.
-                </span>
-              </h2>
-              <p className="text-slate-400 text-lg mb-10 max-w-xl mx-auto">
-                Join hundreds of students who've already recovered their belongings through Lost2Found.
+      {/* ══════════════════════════════════════════════════════════════
+          5. CAMPUS SAFETY & TRUST PILLARS
+      ══════════════════════════════════════════════════════════════ */}
+      <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          
+          <div className="card-saas p-5 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 text-sm mb-1">Gemini AI Matching</h4>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Smart automated scoring compares keywords, dates, and locations.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  to={isAuthenticated ? '/report-lost' : '/register'}
-                  className="px-8 py-3.5 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-100 transition-all text-base shadow-lg"
-                >
-                  😞 Report a Lost Item
-                </Link>
-                <Link
-                  to="/items"
-                  className="px-8 py-3.5 border-2 border-white/15 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all text-base"
-                >
-                  🎉 Browse Found Items
-                </Link>
-              </div>
+            </div>
+          </div>
+
+          <div className="card-saas p-5 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 text-sm mb-1">In-App Chat</h4>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Direct student-to-student messaging without sharing phone numbers.
+              </p>
+            </div>
+          </div>
+
+          <div className="card-saas p-5 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 text-sm mb-1">Live Notifications</h4>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Instant alerts when a potential match or claim update occurs.
+              </p>
+            </div>
+          </div>
+
+          <div className="card-saas p-5 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 text-sm mb-1">Verified Community</h4>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Restricted to campus authentication to ensure integrity.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════
+          6. BOTTOM CALL TO ACTION
+      ══════════════════════════════════════════════════════════════ */}
+      <section className="py-12 sm:py-16 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="card-saas p-8 sm:p-12 text-center bg-slate-900 text-white relative overflow-hidden shadow-xl">
+          <div className="relative z-10 max-w-2xl mx-auto">
+            <h3 className="text-2xl sm:text-3xl font-extrabold mb-3 tracking-tight">
+              Help make our campus a safer place.
+            </h3>
+            <p className="text-slate-300 text-sm sm:text-base mb-8 leading-relaxed">
+              Every reported item brings someone closer to getting back their lost keys, laptops, or IDs. Start today.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                to={isAuthenticated ? '/report-lost' : '/login'}
+                className="btn-lost w-full sm:w-auto px-6 py-3 font-semibold"
+              >
+                Report Lost Item
+              </Link>
+              <Link
+                to={isAuthenticated ? '/report-found' : '/login'}
+                className="btn-found w-full sm:w-auto px-6 py-3 font-semibold"
+              >
+                Report Found Item
+              </Link>
+              <Link
+                to="/items"
+                className="btn-secondary w-full sm:w-auto px-6 py-3 font-semibold bg-white/10 text-white border-white/20 hover:bg-white/20 hover:text-white"
+              >
+                Browse All Items
+              </Link>
             </div>
           </div>
         </div>

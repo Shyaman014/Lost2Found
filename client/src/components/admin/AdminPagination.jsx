@@ -13,12 +13,12 @@ const AdminPagination = ({ page, totalPages, onPageChange }) => {
   }
 
   return (
-    <div className="flex items-center justify-between mt-4 px-1">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 px-1">
       <p className="text-sm text-gray-500">
         Page <span className="font-medium text-gray-700">{page}</span> of{' '}
         <span className="font-medium text-gray-700">{totalPages}</span>
       </p>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap justify-center">
         <button
           onClick={() => onPageChange(1)}
           disabled={page === 1}

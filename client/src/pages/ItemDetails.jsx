@@ -121,21 +121,25 @@ const ItemDetails = () => {
   if (!item) return <div className="text-center py-20">Item not found.</div>;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
-      <div className="bg-white shadow-sm overflow-hidden sm:rounded-lg border border-gray-200">
+    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-12">
+      <div className="bg-white shadow-sm overflow-hidden rounded-xl sm:rounded-2xl border border-gray-200">
         
-        <div className="w-full h-64 sm:h-96 bg-gray-100 overflow-hidden relative">
+        <div className="w-full h-56 sm:h-80 md:h-96 bg-gray-100 overflow-hidden relative">
           <img 
-            src={item.image?.url || getPlaceholderImage(item.category)} 
+            src={item.image?.url?.trim() || getPlaceholderImage(item.category)} 
             alt={`${item.title} reported as ${item.type}`}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = getPlaceholderImage(item.category);
+            }}
             className="w-full h-full object-contain bg-black/5"
             loading="lazy"
           />
         </div>
 
-        <div className="px-4 py-5 sm:px-6 flex justify-between items-center flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
+        <div className="px-4 py-5 sm:px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="w-full sm:w-auto">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-wider ${item.type === 'lost' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                 {item.type}
               </span>
@@ -143,12 +147,12 @@ const ItemDetails = () => {
                 {item.status}
               </span>
             </div>
-            <h3 className="text-2xl leading-6 font-bold text-gray-900">{item.title}</h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">Reported by {item.reportedBy?.name || 'Unknown'} on {new Date(item.createdAt).toLocaleDateString()}</p>
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{item.title}</h3>
+            <p className="mt-1 max-w-2xl text-xs sm:text-sm text-gray-500">Reported by {item.reportedBy?.name || 'Unknown'} on {new Date(item.createdAt).toLocaleDateString()}</p>
           </div>
           
           {isOwner && (
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap w-full sm:w-auto">
               {item.type === 'found' && claimsCount > 0 && (
                 <Link 
                   to={`/items/${item._id}/claims`}

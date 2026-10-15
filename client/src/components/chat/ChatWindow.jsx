@@ -60,31 +60,33 @@ const ChatWindow = ({
   return (
     <div className="flex-1 flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 gap-2">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <AnonymousAvatar role={conversation.otherRole} />
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">{conversation.item.title}</h2>
+          <div className="min-w-0">
+            <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 truncate max-w-[150px] sm:max-w-xs md:max-w-md">
+              {conversation.item.title}
+            </h2>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-600">{conversation.otherRole}</span>
+              <span className="text-xs sm:text-sm font-medium text-gray-600">{conversation.otherRole}</span>
               {isClosed && <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-semibold">Closed</span>}
             </div>
           </div>
         </div>
-        <Link to={`/items/${conversation.item._id}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+        <Link to={`/items/${conversation.item._id}`} className="text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-800 shrink-0">
           View Item
         </Link>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50">
         {messages.map((msg, idx) => {
           const isMine = msg.sender === currentUser._id;
           const showRole = idx === 0 || messages[idx - 1].sender !== msg.sender;
 
           return (
             <div key={msg._id || idx} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] ${isMine ? 'order-1 items-end' : 'order-2 items-start'} flex flex-col`}>
+              <div className={`max-w-[85%] sm:max-w-[75%] ${isMine ? 'order-1 items-end' : 'order-2 items-start'} flex flex-col`}>
                 {!isMine && showRole && (
                   <span className="text-xs text-gray-500 mb-1 ml-1">{conversation.otherRole}</span>
                 )}

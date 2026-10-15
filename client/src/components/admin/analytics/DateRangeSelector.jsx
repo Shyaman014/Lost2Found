@@ -39,7 +39,7 @@ const DateRangeSelector = ({ currentPreset, onRangeChange, loading }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
       {/* Preset pills */}
-      <div className="inline-flex rounded-xl bg-gray-100 p-1 border border-gray-200/60 shadow-inner">
+      <div className="inline-flex rounded-xl bg-gray-100 p-1 border border-gray-200/60 shadow-inner max-w-full overflow-x-auto shrink-0">
         {presets.map((p) => {
           const active = !isCustom && currentPreset === p.id;
           return (

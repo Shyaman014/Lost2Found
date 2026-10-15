@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import http from 'http';
 import app from '../app.js';
@@ -10,7 +12,9 @@ import Match from '../models/Match.js';
 import Report from '../models/Report.js';
 import AuditLog from '../models/AuditLog.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_lost2found_2026';
 
