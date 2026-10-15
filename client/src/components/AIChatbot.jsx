@@ -65,8 +65,6 @@ const AIChatbot = () => {
     }
   }, [messages, isOpen]);
 
-  if (!isAuthenticated) return null;
-
   const handleInputChange = (e) => {
     const val = e.target.value;
     if (val.length <= MAX_CHARS) {
@@ -150,6 +148,8 @@ const AIChatbot = () => {
       },
     ]);
   };
+
+  if (!isAuthenticated) return null;
 
   return (
     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">

@@ -9,87 +9,107 @@ const ClaimCard = ({ claim, isFinderView, onApprove, onReject, onCancel }) => {
   const { _id, status, evidence, message, item, claimant, rejectionReason, createdAt } = claim;
 
   return (
-    <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-      <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-4">
+    <div className="card-saas p-5 sm:p-6 bg-white overflow-hidden shadow-xs hover:border-slate-300 transition-all">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h3 className="font-bold text-gray-900">
-              {isFinderView ? `Claim by ${claimant?.name || 'Unknown User'}` : `Claim on: ${item?.title || 'Unknown Item'}`}
+          <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
+            <h3 className="font-bold text-base text-slate-900">
+              {isFinderView ? `Claim by ${claimant?.name || 'Campus Student'}` : `Claim on: ${item?.title || 'Reported Item'}`}
             </h3>
             <ClaimStatusBadge status={status} />
           </div>
-          <p className="text-xs text-gray-500">Submitted {new Date(createdAt).toLocaleDateString()}</p>
+          <p className="text-xs text-slate-400">
+            Submitted on {new Date(createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+          </p>
         </div>
+
         {!isFinderView && item && (
           <Link
             to={`/items/${item._id}`}
-            className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors self-start sm:self-auto"
           >
-            View Item
+            View Item Details →
           </Link>
         )}
       </div>
 
+      {/* Content */}
       <div className="space-y-4">
+        {/* Verification Message */}
         <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Message</h4>
-          <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">{evidence?.message || message}</p>
+          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            Claimant's Message
+          </h4>
+          <p className="text-xs sm:text-sm text-slate-700 bg-slate-50 p-3.5 rounded-xl border border-slate-100 leading-relaxed whitespace-pre-wrap">
+            {evidence?.message || message || 'No message provided.'}
+          </p>
         </div>
-        <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Identifying Details</h4>
-          <ul className="list-disc pl-5 space-y-1">
-            {evidence?.specificDetails?.map((detail, idx) => (
-              <li key={idx} className="text-sm text-gray-600">{detail}</li>
-            ))}
-          </ul>
-        </div>
+
+        {/* Identifying Details Answers */}
+        {evidence?.specificDetails && evidence.specificDetails.length > 0 && (
+          <div>
+            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+              Provided Security Answers
+            </h4>
+            <div className="space-y-1.5">
+              {evidence.specificDetails.map((detail, idx) => (
+                <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-slate-700 bg-indigo-50/40 border border-indigo-100/60 p-2.5 rounded-lg">
+                  <span className="text-indigo-600 font-bold shrink-0">#{idx + 1}</span>
+                  <span>{detail}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Rejection Banner */}
       {status === 'rejected' && rejectionReason && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-md">
-          <p className="text-xs font-semibold text-red-800 mb-1">Rejection Reason:</p>
-          <p className="text-sm text-red-700">{rejectionReason}</p>
+        <div className="mt-4 p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl text-xs sm:text-sm">
+          <p className="font-bold text-rose-800 mb-0.5">Rejection Reason:</p>
+          <p className="text-rose-700">{rejectionReason}</p>
         </div>
       )}
 
-      {/* Finder Actions */}
+      {/* Finder Actions (Approve / Reject) */}
       {isFinderView && status === 'pending' && (
-        <div className="mt-6 pt-4 border-t border-gray-100">
+        <div className="mt-5 pt-4 border-t border-slate-100">
           {!rejecting ? (
-            <div className="flex gap-3">
+            <div className="flex gap-2.5">
               <button
                 onClick={() => onApprove(_id)}
-                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-green-700"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
               >
-                Approve Claim
+                <span>✓</span> Approve & Open Private Chat
               </button>
               <button
                 onClick={() => setRejecting(true)}
-                className="flex-1 bg-white text-red-600 border border-red-200 px-4 py-2 rounded-md font-medium text-sm hover:bg-red-50"
+                className="flex-1 bg-white text-rose-700 border border-rose-200 hover:bg-rose-50 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer"
               >
                 Reject Claim
               </button>
             </div>
           ) : (
-            <div className="bg-red-50 p-4 rounded-md border border-red-100">
-              <label className="block text-sm font-medium text-red-800 mb-1">Reason for Rejection</label>
+            <div className="bg-rose-50/60 p-4 rounded-xl border border-rose-100 anim-scale-in">
+              <label className="block text-xs font-bold text-rose-800 mb-1.5">Reason for Rejection</label>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full text-sm p-2 border border-red-200 rounded-md mb-3"
+                className="w-full text-xs sm:text-sm p-2.5 border border-rose-200 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
                 rows="2"
-                placeholder="Optional explanation..."
+                placeholder="Briefly state why this claim was not verified..."
               />
               <div className="flex gap-2">
                 <button
                   onClick={() => onReject(_id, reason)}
-                  className="bg-red-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-red-700"
+                  className="bg-rose-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-700 transition-colors cursor-pointer"
                 >
                   Confirm Rejection
                 </button>
                 <button
                   onClick={() => { setRejecting(false); setReason(''); }}
-                  className="bg-white text-gray-600 border border-gray-300 px-3 py-1.5 rounded text-sm font-medium hover:bg-gray-50"
+                  className="bg-white text-slate-600 border border-slate-300 px-3.5 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -99,14 +119,14 @@ const ClaimCard = ({ claim, isFinderView, onApprove, onReject, onCancel }) => {
         </div>
       )}
 
-      {/* Claimant Actions */}
+      {/* Claimant Actions (Cancel) */}
       {!isFinderView && status === 'pending' && (
-        <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+        <div className="mt-5 pt-4 border-t border-slate-100 flex justify-end">
           <button
             onClick={() => {
-              if(window.confirm('Are you sure you want to cancel this claim?')) onCancel(_id);
+              if (window.confirm('Are you sure you want to cancel this claim?')) onCancel(_id);
             }}
-            className="text-sm font-medium text-red-600 hover:text-red-800"
+            className="text-xs font-bold text-rose-600 hover:text-rose-800 transition-colors cursor-pointer"
           >
             Cancel Claim
           </button>

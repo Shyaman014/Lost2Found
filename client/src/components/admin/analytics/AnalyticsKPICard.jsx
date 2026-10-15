@@ -44,7 +44,7 @@ const AnalyticsKPICard = ({
   const theme = colorThemes[color] || colorThemes.indigo;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
+    <div className="card-saas-hover p-5 bg-white relative overflow-hidden flex flex-col justify-between">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{title}</span>
         {icon && (

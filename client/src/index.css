@@ -93,25 +93,66 @@
   .delay-300 { animation-delay: 300ms; }
   .delay-400 { animation-delay: 400ms; }
 
+  /* ── Shimmer Animation for Skeletons ── */
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+  .animate-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .animate-shimmer::after {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0,
+      rgba(255, 255, 255, 0.4) 20%,
+      rgba(255, 255, 255, 0.6) 60%,
+      rgba(255, 255, 255, 0)
+    );
+    animation: shimmer 1.8s infinite;
+    content: '';
+  }
+
   /* ── Clean SaaS Cards ── */
   .card-saas {
     background: #FFFFFF;
-    border: 1px solid #E2E8F0;
+    border: 1px solid rgba(226, 232, 240, 0.85);
     border-radius: 1rem;
-    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.03), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
   }
 
   .card-saas-hover {
     background: #FFFFFF;
-    border: 1px solid #E2E8F0;
+    border: 1px solid rgba(226, 232, 240, 0.85);
     border-radius: 1rem;
-    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.03), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .card-saas-hover:hover {
-    border-color: #CBD5E1;
+    border-color: rgba(199, 210, 254, 0.9);
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+    box-shadow: 0 12px 28px -6px rgba(79, 70, 229, 0.08), 0 6px 12px -4px rgba(15, 23, 42, 0.03);
+  }
+
+  /* ── Glassmorphism Tokens ── */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+  }
+
+  .glass-nav {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.7);
   }
 
   /* ── SaaS Buttons ── */
@@ -121,28 +162,29 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 0.625rem 1.25rem;
-    background: #4F46E5;
+    background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
     color: #FFFFFF;
     font-weight: 600;
     font-size: 0.875rem;
     border-radius: 0.75rem;
-    border: 1px solid transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
     cursor: pointer;
-    transition: all 0.15s ease-in-out;
-    box-shadow: 0 1px 2px 0 rgba(79, 70, 229, 0.2);
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 6px 0 rgba(79, 70, 229, 0.25);
   }
   .btn-primary:hover {
-    background: #4338CA;
+    background: linear-gradient(135deg, #4338CA 0%, #4F46E5 100%);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px 0 rgba(79, 70, 229, 0.3);
+    box-shadow: 0 6px 16px 0 rgba(79, 70, 229, 0.35);
   }
   .btn-primary:active {
     transform: translateY(0);
   }
   .btn-primary:disabled {
-    opacity: 0.6;
+    opacity: 0.55;
     cursor: not-allowed;
     transform: none;
+    box-shadow: none;
   }
 
   .btn-secondary {

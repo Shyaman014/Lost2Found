@@ -18,20 +18,21 @@ const CATEGORIES = [
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest First' },
   { value: 'oldest', label: 'Oldest First' },
-  { value: 'date-newest', label: 'Date Lost/Found (Newest)' },
-  { value: 'date-oldest', label: 'Date Lost/Found (Oldest)' },
+  { value: 'date-newest', label: 'Date Reported (Newest)' },
+  { value: 'date-oldest', label: 'Date Reported (Oldest)' },
 ];
 
 const Field = ({ label, children }) => (
   <div className="mb-4">
-    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
       {label}
     </label>
     {children}
   </div>
 );
 
-const inputCls = 'w-full border border-gray-300 rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white';
+const inputCls =
+  'w-full border border-slate-200/90 rounded-xl py-2 px-3 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-500/10 bg-slate-50/50 hover:bg-white transition-all';
 
 const ItemFilters = ({ filters, onChange, onClear }) => {
   const handleChange = (key, value) => {
@@ -40,38 +41,52 @@ const ItemFilters = ({ filters, onChange, onClear }) => {
 
   return (
     <aside className="w-full">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Filters</h2>
+      <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+          </svg>
+          <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Refine Search</h2>
+        </div>
         <button
           onClick={onClear}
-          className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+          className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1 rounded-md hover:bg-indigo-50 transition-colors"
           type="button"
         >
-          Clear all
+          Reset
         </button>
       </div>
 
       {/* Type */}
       <Field label="Item Type">
-        <div className="flex gap-2 flex-wrap">
-          {['', 'lost', 'found'].map(t => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => handleChange('type', t)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
-                filters.type === t
-                  ? t === 'lost'
-                    ? 'bg-red-600 text-white border-red-600'
-                    : t === 'found'
-                    ? 'bg-green-600 text-white border-green-600'
-                    : 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'
-              }`}
-            >
-              {t === '' ? 'All' : t === 'lost' ? 'Lost' : 'Found'}
-            </button>
-          ))}
+        <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100/80 rounded-xl border border-slate-200/60">
+          {[
+            { value: '', label: 'All' },
+            { value: 'lost', label: 'Lost' },
+            { value: 'found', label: 'Found' },
+          ].map((t) => {
+            const isSelected = filters.type === t.value;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => handleChange('type', t.value)}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  isSelected
+                    ? t.value === 'lost'
+                      ? 'bg-rose-500 text-white shadow-xs'
+                      : t.value === 'found'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                {t.value === 'lost' && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-rose-500'}`} />}
+                {t.value === 'found' && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-emerald-500'}`} />}
+                {t.label}
+              </button>
+            );
+          })}
         </div>
       </Field>
 
@@ -79,11 +94,13 @@ const ItemFilters = ({ filters, onChange, onClear }) => {
       <Field label="Category">
         <select
           value={filters.category}
-          onChange={e => handleChange('category', e.target.value)}
+          onChange={(e) => handleChange('category', e.target.value)}
           className={inputCls}
         >
-          {CATEGORIES.map(c => (
-            <option key={c.value} value={c.value}>{c.label}</option>
+          {CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
           ))}
         </select>
       </Field>
@@ -92,11 +109,11 @@ const ItemFilters = ({ filters, onChange, onClear }) => {
       <Field label="Status">
         <select
           value={filters.status}
-          onChange={e => handleChange('status', e.target.value)}
+          onChange={(e) => handleChange('status', e.target.value)}
           className={inputCls}
         >
-          <option value="active">Active</option>
-          <option value="resolved">Resolved</option>
+          <option value="active">Active Reports</option>
+          <option value="resolved">Resolved / Reunited</option>
         </select>
       </Field>
 
@@ -104,67 +121,71 @@ const ItemFilters = ({ filters, onChange, onClear }) => {
       <Field label="Sort By">
         <select
           value={filters.sort}
-          onChange={e => handleChange('sort', e.target.value)}
+          onChange={(e) => handleChange('sort', e.target.value)}
           className={inputCls}
         >
-          {SORT_OPTIONS.map(s => (
-            <option key={s.value} value={s.value}>{s.label}</option>
+          {SORT_OPTIONS.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
           ))}
         </select>
       </Field>
 
       {/* Location */}
-      <Field label="Location">
-        <input
-          type="text"
-          value={filters.location}
-          onChange={e => handleChange('location', e.target.value)}
-          placeholder="e.g. Library"
-          className={inputCls}
-        />
+      <Field label="Campus Location">
+        <div className="relative">
+          <input
+            type="text"
+            value={filters.location}
+            onChange={(e) => handleChange('location', e.target.value)}
+            placeholder="e.g. Science Library, Hall A"
+            className={inputCls}
+          />
+        </div>
       </Field>
 
-      {/* Date From */}
-      <Field label="Date From">
-        <input
-          type="date"
-          value={filters.dateFrom}
-          onChange={e => handleChange('dateFrom', e.target.value)}
-          className={inputCls}
-        />
-      </Field>
+      {/* Date Range */}
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="From Date">
+          <input
+            type="date"
+            value={filters.dateFrom}
+            onChange={(e) => handleChange('dateFrom', e.target.value)}
+            className={inputCls}
+          />
+        </Field>
+        <Field label="To Date">
+          <input
+            type="date"
+            value={filters.dateTo}
+            onChange={(e) => handleChange('dateTo', e.target.value)}
+            className={inputCls}
+          />
+        </Field>
+      </div>
 
-      {/* Date To */}
-      <Field label="Date To">
-        <input
-          type="date"
-          value={filters.dateTo}
-          onChange={e => handleChange('dateTo', e.target.value)}
-          className={inputCls}
-        />
-      </Field>
-
-      {/* Color */}
-      <Field label="Color">
-        <input
-          type="text"
-          value={filters.color}
-          onChange={e => handleChange('color', e.target.value)}
-          placeholder="e.g. Black"
-          className={inputCls}
-        />
-      </Field>
-
-      {/* Brand */}
-      <Field label="Brand">
-        <input
-          type="text"
-          value={filters.brand}
-          onChange={e => handleChange('brand', e.target.value)}
-          placeholder="e.g. Casio"
-          className={inputCls}
-        />
-      </Field>
+      {/* Color & Brand */}
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Color">
+          <input
+            type="text"
+            value={filters.color}
+            onChange={(e) => handleChange('color', e.target.value)}
+            placeholder="e.g. Blue"
+            className={inputCls}
+          />
+        </Field>
+        <Field label="Brand">
+          <input
+            type="text"
+            value={filters.brand}
+            onChange={(e) => handleChange('brand', e.target.value)}
+            placeholder="e.g. Apple"
+            className={inputCls}
+          />
+        </Field>
+      </div>
     </aside>
   );
 };

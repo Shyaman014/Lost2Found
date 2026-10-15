@@ -101,7 +101,7 @@ const Login = () => {
           </div>
 
           {/* Demo Banner */}
-          <div className="mb-6 rounded-2xl p-4 border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 anim-fade delay-100">
+          <div className="mb-6 rounded-2xl p-4 border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 anim-fade delay-100 flex items-center justify-between gap-3">
             <div className="flex items-start gap-3">
               <span className="text-xl">⚡</span>
               <div>
@@ -109,6 +109,19 @@ const Login = () => {
                 <p className="text-xs text-amber-700 mt-0.5">Use <strong>Demo Mode</strong> to explore instantly — no account needed.</p>
               </div>
             </div>
+            <button
+              type="button"
+              id="top-demo-login-btn"
+              onClick={handleDemoLogin}
+              disabled={isLoading || isDemoLoading}
+              className="flex-shrink-0 px-3.5 py-1.5 rounded-xl border border-amber-300 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm hover:shadow transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+            >
+              {isDemoLoading ? (
+                <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              ) : (
+                'Try Demo'
+              )}
+            </button>
           </div>
 
           {/* Error */}
